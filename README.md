@@ -1,5 +1,12 @@
 # CM3070-FP-Music-Recommendation
 
+## Folder Structure
+
+- `backend`
+  - `music_recommendation` - the main Django project
+  - `recommend_api` - the Django app that provides the music recommendation API and serves the HTML/JS/CSS assets
+- `frontend` - assets that are bundled into static assets and served by the `recommend_api` app
+
 ### 7.2 Project Idea 2: NextTrack: A music recommendation API
 
 **What problem is this project solving, or what is the project idea?**  
