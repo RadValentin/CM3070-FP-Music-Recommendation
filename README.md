@@ -1,5 +1,17 @@
 # CM3070-FP-Music-Recommendation
 
+## Installation
+
+```bash
+pip install Django django-jsonfield numpy pandas scikit-learn 
+```
+
+```bash
+# populate DB
+cd backend/
+python scripts/populate_db.py
+```
+
 ## Folder Structure
 
 - `backend`
