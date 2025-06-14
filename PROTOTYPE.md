@@ -13,5 +13,13 @@ Some insights on the vectors themselves:
 - Each has a 10k features upper bound
 - They're sparsely populated, most values being zero
 - They're stored in the DB as raw JSON which will involve some overhead when accessing and processing them
+- Saving the data to the DB takes around 10 minutes
 
 Similar songs can be identified by calculating the cosine similarity between the original song's and all other songs TF-IDF vectors. The songs with the highest values (between -1 and 1) will also be closest in terms of their lyrical content.
+
+In order to increase performance I decided to store the vectors as a separate file instead and only keep the song metadata in the DB.
+
+## Notes for project
+
+I've chosen "NextTrack: A music recommendation API" as the template for my project. The main reason is that I find the domain area interesting and it addresses an real shortcoming of current-day music platforms which I often come across. It always happens that I get stuck in a loop of either the same songs or songs I don't enjoy. I think it would be interesting to solve this issue. Plus, I can use the project to demonstrate my web development skills when applying for jobs later on.
+
