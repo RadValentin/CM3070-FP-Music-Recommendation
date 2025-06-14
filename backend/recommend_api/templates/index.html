@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NextTrack: A music recommendation API</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    html, body {
+      font-family: sans-serif;
+    }
+    .main {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .columns {
+      display: flex;
+      justify-content: space-around;
+    }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <h1>NextTrack: A music recommendation API</h1>
+    
+    <div class="columns">
+      <div>
+        <h2>Random songs</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Artist - Track Title</th>
+            </tr>
+          </thead>
+          {% for song in songs %}
+            <tr>
+              <td>{{song.id}}</td>
+              <td><a href="/api/song/{{song.id}}"> {{song.artist}} - {{song.title}}</a></td>
+            </tr>
+          {% endfor %}
+        </table>
+      </div>
+      <div>
+        <h2>Recommendation based on ID</h2>
+        <form action="/api/similar/" method="POST">
+          <input name="id" type="text" />
+          <input type="submit" />
+        </form>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

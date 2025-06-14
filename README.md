@@ -3,7 +3,7 @@
 ## Installation
 
 ```bash
-pip install Django django-jsonfield numpy pandas scikit-learn 
+pip install Django numpy pandas scikit-learn djangorestframework
 ```
 
 ```bash
