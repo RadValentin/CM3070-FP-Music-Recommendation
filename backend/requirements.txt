@@ -1,4 +1,14 @@
 asgiref==3.8.1
-Django==5.2.1
+Django==5.2.3
+djangorestframework==3.16.0
+joblib==1.5.1
+numpy==2.3.0
+pandas==2.3.0
+python-dateutil==2.9.0.post0
+pytz==2025.2
+scikit-learn==1.7.0
+scipy==1.15.3
+six==1.17.0
 sqlparse==0.5.3
+threadpoolctl==3.6.0
 tzdata==2025.2
