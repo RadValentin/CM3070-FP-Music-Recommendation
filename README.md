@@ -19,7 +19,51 @@ python scripts/populate_db.py
   - `recommend_api` - the Django app that provides the music recommendation API and serves the HTML/JS/CSS assets
 - `frontend` - assets that are bundled into static assets and served by the `recommend_api` app
 
-### 7.2 Project Idea 2: NextTrack: A music recommendation API
+## Prototype App
+
+As a placeholder for the final dataset, I used the ["Spotify Million Song Dataset"](https://www.kaggle.com/datasets/notshrirang/spotify-million-song-dataset) licensed under [CC0: Public Domain](https://creativecommons.org/publicdomain/zero/1.0/) from Kaggle.
+
+Prototype user flow:
+- User finds the song he likes using the front-end
+  - Back-end should support searching for songs by title, returning matches with their IDs
+- Dataset is loaded, a machine learning model is trained on it
+
+For 57650 songs it takes 2,85 GB of disk space to store their associated TF-IDF vectors. This is a noticeable increase in storage requirements as the lyrics themselves only take up 71 MB.
+
+Some insights on the vectors themselves:
+- Each has a 10k features upper bound
+- They're sparsely populated, most values being zero
+- They're stored in the DB as raw JSON which will involve some overhead when accessing and processing them
+- Saving the data to the DB takes around 10 minutes
+
+Similar songs can be identified by calculating the cosine similarity between the original song's and all other songs TF-IDF vectors. The songs with the highest values (between -1 and 1) will also be closest in terms of their lyrical content.
+
+In order to increase performance I decided to store the vectors as a separate file instead and only keep the song metadata in the DB.
+
+### Notes for project
+
+I've chosen "NextTrack: A music recommendation API" as the template for my project. The main reason is that I find the domain area interesting and it addresses an real shortcoming of current-day music platforms which I often come across. It always happens that I get stuck in a loop of either the same songs or songs I don't enjoy. I think it would be interesting to solve this issue. Plus, I can use the project to demonstrate my web development skills when applying for jobs later on.
+
+## Progress Log
+### 09 June 2025 
+- Drafted a simple development plan
+- Went through Week 3 materials
+### 11 June 2025
+- Write preliminary report: Introduction, Validation
+### 13 June 2025
+- Find basic dataset for use in prototype
+- Format data and load it into DB
+- Extract features (TF-IDF) to use for checking if songs are similar
+### 14 June 2025
+- Optimize data storage so it's performant enough to demo (remove bottlenecks)
+- Create basic API for retrieving song details and song recommendations
+### 15 June 2025
+- Wrote simple report section on prototype
+### 16 June 2025
+- Finalized report section on prototype development
+- Submitted preliminary report
+
+## 7.2 Project Idea 2: NextTrack: A music recommendation API
 
 **What problem is this project solving, or what is the project idea?**  
 Design a music recommendation API that gives a ‘next track’ based on an HTTP request, providing listening history and some preference parameters, along with data about the tracks available.
