@@ -44,25 +44,6 @@ In order to increase performance I decided to store the vectors as a separate fi
 
 I've chosen "NextTrack: A music recommendation API" as the template for my project. The main reason is that I find the domain area interesting and it addresses an real shortcoming of current-day music platforms which I often come across. It always happens that I get stuck in a loop of either the same songs or songs I don't enjoy. I think it would be interesting to solve this issue. Plus, I can use the project to demonstrate my web development skills when applying for jobs later on.
 
-## Progress Log
-### 09 June 2025 
-- Drafted a simple development plan
-- Went through Week 3 materials
-### 11 June 2025
-- Write preliminary report: Introduction, Validation
-### 13 June 2025
-- Find basic dataset for use in prototype
-- Format data and load it into DB
-- Extract features (TF-IDF) to use for checking if songs are similar
-### 14 June 2025
-- Optimize data storage so it's performant enough to demo (remove bottlenecks)
-- Create basic API for retrieving song details and song recommendations
-### 15 June 2025
-- Wrote simple report section on prototype
-### 16 June 2025
-- Finalized report section on prototype development
-- Submitted preliminary report
-
 ## 7.2 Project Idea 2: NextTrack: A music recommendation API
 
 **What problem is this project solving, or what is the project idea?**  
