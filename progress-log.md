@@ -23,4 +23,7 @@
 - Research online datasets that contain pre-extracted audio features
 - Research how Spotify does recommendations
 ### 19 July 2025
+- Load the AcousticBrainz data into SQLite through a Python script so it can be easily queried
+
+### TODO
 - Cover the module materials
