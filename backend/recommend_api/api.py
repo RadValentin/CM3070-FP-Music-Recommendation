@@ -5,7 +5,7 @@ from rest_framework import status
 from .models import *
 from .serializers import *
 import numpy as np
-from scripts.tfidf_vector_store import TFIDF_MATRIX
+#from scripts.tfidf_vector_store import TFIDF_MATRIX
 from sklearn.metrics.pairwise import cosine_similarity
 
 @api_view(['GET'])
@@ -26,10 +26,10 @@ def similar_songs(request):
     except Song.DoesNotExist:
         return HttpResponse(status=404)
     
-    query_vec = TFIDF_MATRIX[query_song.id].reshape(1, -1)
-    similarities = cosine_similarity(query_vec, TFIDF_MATRIX).flatten()
-    top_indices = np.argpartition(similarities, -11)[-11:]
-    top_indices = top_indices[np.argsort(similarities[top_indices])[::-1]]
+    #query_vec = TFIDF_MATRIX[query_song.id].reshape(1, -1)
+    #similarities = cosine_similarity(query_vec, TFIDF_MATRIX).flatten()
+    #top_indices = np.argpartition(similarities, -11)[-11:]
+    #top_indices = top_indices[np.argsort(similarities[top_indices])[::-1]]
     top_indices = [i for i in top_indices if i != query_song.id][:10]
     similar_songs = Song.objects.filter(id__in=top_indices)
 
