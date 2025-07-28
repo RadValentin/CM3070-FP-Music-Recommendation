@@ -11,6 +11,7 @@
 # %%
 import io
 import os
+import re
 import sys
 import json
 import django
@@ -37,19 +38,32 @@ def parse_flexible_date(date_str):
     if not date_str or not isinstance(date_str, str):
         return None
 
-    date_str = date_str.strip()
+    date_str = date_str.strip().lower()
 
     # Clean common invalid formats
     if date_str.startswith("0000") or "00-00" in date_str:
         return None
+    
+    # Remove ordinal suffixes: 1st, 2nd, 3rd, 23rd, etc.
+    date_str = re.sub(r'(\d{1,2})(st|nd|rd|th)', r'\1', date_str)
+
+    # Remove "of" (e.g. "23 of February" to "23 February")
+    date_str = re.sub(r'\bof\b', '', date_str)
+
+    # Remove extra commas and fix spacing
+    date_str = re.sub(r',', '', date_str)
+    date_str = re.sub(r'\s+', ' ', date_str).strip()
 
     formats = [
-        "%Y-%m-%d", 
-        "%Y-%m", 
-        "%Y", 
-        "%Y-%m-%dT%H:%M:%S", 
-        "%Y-%m-%dT%H:%M:%SZ", 
-        "%Y-%m-%d %H:%M:%S"
+        "%Y-%m-%d",           # "2005-07-14"
+        "%Y-%m",              # "2005-07"
+        "%Y",                 # "2005"
+        "%Y.%m.%d",           # "2000.06.21"
+        "%d %B %Y",           # "23 February 1998"
+        "%d %b %Y",           # "23 Feb 1998"
+        "%Y-%m-%dT%H:%M:%S",  # "2005-07-14T13:45:30"
+        "%Y-%m-%dT%H:%M:%SZ", # "2005-07-14T13:45:30Z"
+        "%Y-%m-%d %H:%M:%S"   # "2005-07-14 13:45:30"
     ]
 
     for fmt in formats:
@@ -67,7 +81,7 @@ def parse_flexible_date(date_str):
 
     # Fallback: try partial ISO dates like "1984-1"
     try:
-        parts = date_str.split("-")
+        parts = re.split(r'[-./]', date_str)
         year = int(parts[0])
         month = int(parts[1]) if len(parts) > 1 else 1
         day = int(parts[2]) if len(parts) > 2 else 1
@@ -93,12 +107,17 @@ def extract_data_from_json(filepath):
         artist = tags.get('artist', [None])[0]
         title = tags.get('title', [None])[0]
 
-        release_date = parse_flexible_date(tags.get('originaldate', [None])[0])
-        if not release_date:
-            release_date = parse_flexible_date(tags.get('date', [None])[0])
+        date = tags.get('date', [None])[0]
+        originaldate = tags.get('originaldate', [None])[0]
 
+        release_date = parse_flexible_date(originaldate)
         if not release_date:
-            print(f"Missing or invalid date on track: {artist} - {title}, values: {tags.get('date', [None])[0]}, {tags.get('originaldate', [None])[0]}")
+            release_date = parse_flexible_date(date)
+
+        if not release_date and (date or originaldate):
+            print(f"Missing or invalid date on track: {artist} - {title}, values: {date}, {originaldate}")
+            global invalid_date_count
+            invalid_date_count += 1
             return None
 
         try:
@@ -121,6 +140,8 @@ def extract_data_from_json(filepath):
             brightness = highlevel['timbre']['all']['bright']
         except (KeyError, IndexError, TypeError):
             print(f'missing data in file: {filepath}')
+            global missing_data_count
+            missing_data_count += 1
             return None
 
         return Track(
@@ -182,6 +203,9 @@ start = time.time()
 print(f"Will load {len(json_paths)} records")
 
 unique_records = {}
+duplicate_count = 0
+invalid_date_count = 0
+missing_data_count = 0
 # cpu_threads = os.cpu_count() or 4
 # max_workers = cpu_threads * 2
 with ThreadPoolExecutor(max_workers=8) as executor:
@@ -197,11 +221,15 @@ with ThreadPoolExecutor(max_workers=8) as executor:
             # only load it if that submission failed (missing data)
             if track_id not in unique_records or unique_records[track_id] is None:
                 unique_records[track_id] = record
+            else:
+                duplicate_count += 1
 
 records = list(unique_records.values())
 end = time.time()
 print(f"Finished loading records into memory in {end - start:.2f}s, now running the ORM inserts.")
-
+print(f"Found {duplicate_count} duplicate submissions.")
+print(f"Found {invalid_date_count} submissions with invalid dates.")
+print(f"Found {missing_data_count} submissions with missing data.")
 
 start = time.time()
 batch_size = 2000
