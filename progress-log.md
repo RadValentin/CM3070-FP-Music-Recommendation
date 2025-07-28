@@ -25,5 +25,11 @@
 ### 19 July 2025
 - Load the AcousticBrainz data into SQLite through a Python script so it can be easily queried
 
+### 21 - 27 July 2025
+- VACATION
+
+### 28 July
+- Research ISMIR and recommender systems
+
 ### TODO
 - Cover the module materials
