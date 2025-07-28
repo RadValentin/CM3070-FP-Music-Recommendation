@@ -15,6 +15,7 @@ import sys
 import json
 import django
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pprint import pprint
 
@@ -30,6 +31,9 @@ from recommend_api.models import Track
 # %%
 
 def parse_flexible_date(date_str):
+    """
+    Given a date as a string, try to extract its information as a datetime object
+    """
     if not date_str or not isinstance(date_str, str):
         return None
 
@@ -97,32 +101,62 @@ def extract_data_from_json(filepath):
             print(f"Missing or invalid date on track: {artist} - {title}, values: {tags.get('date', [None])[0]}, {tags.get('originaldate', [None])[0]}")
             return None
 
-        # TODO: If artist, title and possibly other fields end up being None, skip and log. 
-        # Determine which fields are mandatory.
+        try:
+            # Required metadata
+            album = tags['album'][0]
+            duration = metadata['audio_properties']['length']
+
+            # High-level features
+            genre = highlevel['genre_dortmund']['value']
+            danceability = highlevel['danceability']['all']['danceable']
+            aggressiveness = highlevel['mood_aggressive']['all']['aggressive']
+            happiness = highlevel['mood_happy']['all']['happy']
+            sadness = highlevel['mood_sad']['all']['sad']
+            relaxedness = highlevel['mood_relaxed']['all']['relaxed']
+            partyness = highlevel['mood_party']['all']['party']
+            acousticness = highlevel['mood_acoustic']['all']['acoustic']
+            electronicness = highlevel['mood_electronic']['all']['electronic']
+            instrumentalness = highlevel['voice_instrumental']['all']['instrumental']
+            tonality = highlevel['tonal_atonal']['all']['tonal']
+            brightness = highlevel['timbre']['all']['bright']
+        except (KeyError, IndexError, TypeError):
+            print(f'missing data in file: {filepath}')
+            return None
+
         return Track(
-            # metadata
-            artist = artist,
-            album= tags.get('album', [None])[0],
-            title= title,
-            release_date= release_date,
-            duration= metadata.get('audio_properties', {}).get('length', None),
-            
-            # high-level features
-            genre= highlevel.get('genre_dortmund', {}).get('value', None),
-            danceability= highlevel.get('danceability', {}).get('all', {}).get('danceable', None),
-            aggressiveness= highlevel.get('mood_aggressive', {}).get('all', {}).get('aggressive', None),
-            happiness= highlevel.get('mood_happy', {}).get('all', {}).get('happy', None),
-            sadness= highlevel.get('mood_sad', {}).get('all', {}).get('sad', None),
-            relaxedness= highlevel.get('mood_relaxed', {}).get('all', {}).get('relaxed', None),
-            partyness= highlevel.get('mood_party', {}).get('all', {}).get('party', None),
-            acousticness= highlevel.get('mood_acoustic', {}).get('all', {}).get('acoustic', None),
-            electronicness= highlevel.get('mood_electronic', {}).get('all', {}).get('electronic', None),
-            instrumentalness= highlevel.get('voice_instrumental', {}).get('all', {}).get('instrumental', None),
-            tonality= highlevel.get('tonal_atonal', {}).get('all', {}).get('tonal', None),
-            brightness= highlevel.get('timbre', {}).get('all', {}).get('bright', None),
+            artist=artist,
+            album=album,
+            title=title,
+            release_date=release_date,
+            duration=duration,
+            genre=genre,
+            danceability=danceability,
+            aggressiveness=aggressiveness,
+            happiness=happiness,
+            sadness=sadness,
+            relaxedness=relaxedness,
+            partyness=partyness,
+            acousticness=acousticness,
+            electronicness=electronicness,
+            instrumentalness=instrumentalness,
+            tonality=tonality,
+            brightness=brightness,
         )
 
+def process_file(json_path):
+    """
+    Utility function for loading and parsing JSON files in parallel
+    """
+    record = extract_data_from_json(json_path)
+    if record is not None:
+        # Extract the ID portion (before the last '-') to group submissions
+        basename = os.path.basename(json_path)
+        track_id = '-'.join(basename.split('-')[:-1])
+        return (track_id, record)
+    return None
+
 # %%
+#highlevel_path = 'acousticbrainz-highlevel-sample-json-20220623/highlevel/'
 highlevel_path = 'acousticbrainz-highlevel-json-20220623/highlevel/'
 
 
@@ -136,35 +170,47 @@ for root, dirs, files in os.walk(highlevel_path):
     for name in files:
         json_paths.append(os.path.join(root, name))
 
+# Clean old records
 Track.objects.all().delete()
 
 
 # %%
-records = []
+
 start = time.time()
 
 #json_paths = json_paths[0:1000]
-
 print(f"Will load {len(json_paths)} records")
 
-for json_path in json_paths:
-    # TODO: Use a hashmap to check if the track has been already added (from another submission), 
-    # only load it if that submission failed (missing data)
-    record = extract_data_from_json(json_path)
+unique_records = {}
+# cpu_threads = os.cpu_count() or 4
+# max_workers = cpu_threads * 2
+with ThreadPoolExecutor(max_workers=8) as executor:
+    # TODO: To safely process the full 30M dataset on 16GB RAM, break JSON loading and inserts into smaller chunks
+    # e.g. process 5–10 million files at a time to avoid memory exhaustion.
 
-    if record is not None:
-        records.append(record)
+    futures = [executor.submit(process_file, path) for path in json_paths]
+    for future in futures:
+        result = future.result()
+        if result:
+            track_id, record = result
+            # Use a hashmap to check if the track has been already added (from another submission), 
+            # only load it if that submission failed (missing data)
+            if track_id not in unique_records or unique_records[track_id] is None:
+                unique_records[track_id] = record
 
+records = list(unique_records.values())
 end = time.time()
 print(f"Finished loading records into memory in {end - start:.2f}s, now running the ORM inserts.")
 
-start = time.time()
 
-# TODO: Increase batch size, proportional to dataset size
-batch_size = 1000
+start = time.time()
+batch_size = 2000
+
 for i in range(0, len(records), batch_size):
-    print(str(i) + '/' + str(len(records)) + ' processed')
+    print(f'{i}/{len(records)} processed')
+    start_batch = time.time()
     Track.objects.bulk_create(records[i:i+batch_size])
+    print(f'Batch took {time.time() - start_batch:.2f} seconds')
 
 end = time.time()
 print(f"Inserted {len(records)} records in {end - start:.2f} seconds")
