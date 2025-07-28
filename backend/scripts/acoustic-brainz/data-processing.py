@@ -97,6 +97,8 @@ def extract_data_from_json(filepath):
             print(f"Missing or invalid date on track: {artist} - {title}, values: {tags.get('date', [None])[0]}, {tags.get('originaldate', [None])[0]}")
             return None
 
+        # TODO: If artist, title and possibly other fields end up being None, skip and log. 
+        # Determine which fields are mandatory.
         return Track(
             # metadata
             artist = artist,
@@ -121,7 +123,7 @@ def extract_data_from_json(filepath):
         )
 
 # %%
-highlevel_path = 'acousticbrainz-highlevel-sample-json-20220623/highlevel/'
+highlevel_path = 'acousticbrainz-highlevel-json-20220623/highlevel/'
 
 
 # test = extract_data_from_json(os.path.join(highlevel_path, '00', '0', '000a9db8-949f-4fa2-9f40-856127df0dbc-0.json'))
@@ -146,6 +148,8 @@ start = time.time()
 print(f"Will load {len(json_paths)} records")
 
 for json_path in json_paths:
+    # TODO: Use a hashmap to check if the track has been already added (from another submission), 
+    # only load it if that submission failed (missing data)
     record = extract_data_from_json(json_path)
 
     if record is not None:
@@ -156,6 +160,7 @@ print(f"Finished loading records into memory in {end - start:.2f}s, now running 
 
 start = time.time()
 
+# TODO: Increase batch size, proportional to dataset size
 batch_size = 1000
 for i in range(0, len(records), batch_size):
     print(str(i) + '/' + str(len(records)) + ' processed')
