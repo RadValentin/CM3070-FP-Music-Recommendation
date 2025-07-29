@@ -24,12 +24,12 @@
 - Research how Spotify does recommendations
 ### 19 July 2025
 - Load the AcousticBrainz data into SQLite through a Python script so it can be easily queried
-
 ### 21 - 27 July 2025
 - VACATION
-
 ### 28 July
 - Optimize data processing script to skip duplicate entries
+- Research ISMIR and recommender systems
+### 29 July
 - Research ISMIR and recommender systems
 
 ### TODO
