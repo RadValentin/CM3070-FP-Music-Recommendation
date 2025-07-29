@@ -29,6 +29,7 @@
 - VACATION
 
 ### 28 July
+- Optimize data processing script to skip duplicate entries
 - Research ISMIR and recommender systems
 
 ### TODO
