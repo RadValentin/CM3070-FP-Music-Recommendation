@@ -31,6 +31,8 @@
 - Research ISMIR and recommender systems
 ### 29 July
 - Research ISMIR and recommender systems
+### 30 July
+- TODO: Read `A Historical Survey of Music Recommendation Systems - Towards Evaluation.pdf`
 
 ### TODO
 - Cover the module materials
