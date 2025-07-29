@@ -7,7 +7,7 @@ class Song(models.Model):
     lyrics = models.TextField()
 
 class Track(models.Model):
-    # TODO: MusicBrainz ID
+    musicbrainz_recordingid = models.CharField(null=True, blank=True, max_length=255)
     artist = models.CharField(null=True, blank=True, max_length=255)
     album = models.CharField(null=True, blank=True, max_length=255)
     title = models.CharField(null=True, blank=True, max_length=255)

@@ -179,3 +179,4 @@ tfidf_matrix.npy
 # DB dumps from AcousticBrainz used to generate the DB, no need to pollute the repo.
 acousticbrainz-highlevel-sample-json-20220623/
 acousticbrainz-highlevel-json-20220623/
+acoustic-brainz/output.txt

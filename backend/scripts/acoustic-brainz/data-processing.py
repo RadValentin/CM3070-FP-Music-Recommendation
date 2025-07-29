@@ -1,11 +1,6 @@
 # %% [markdown]
 # # AcousticBrainz High-Level Sample Data Processing for Music Recommendation System
 # 
-# ## Goals
-# - [x] Iterate through all track files in the high-level sample
-# - [x] Extract MusicBrainz ID, metadata, audio features to a dict
-# - [ ] Map the dict to SQL (we'll add Django ORM later)
-# 
 # > The code assumes you have downloaded the AcousticBrainz DB dumps in the same directory, under `acousticbrainz-highlevel-sample-json-20220623-0/highlevel/`. They can be downloaded from here: https://acousticbrainz.org/download
 
 # %%
@@ -104,9 +99,7 @@ def extract_data_from_json(filepath):
         metadata = data.get('metadata') or {}
         tags = metadata.get('tags') or {}
 
-        artist = tags.get('artist', [None])[0]
-        title = tags.get('title', [None])[0]
-
+        # Date parsing, look through multiple fields to increase chances of finding a valid date
         date = tags.get('date', [None])[0]
         originaldate = tags.get('originaldate', [None])[0]
 
@@ -115,14 +108,17 @@ def extract_data_from_json(filepath):
             release_date = parse_flexible_date(date)
 
         if not release_date and (date or originaldate):
-            print(f"Missing or invalid date on track: {artist} - {title}, values: {date}, {originaldate}")
+            print(f"Missing or invalid date on track: {tags.get('artist', [None])[0]} - {tags.get('title', [None])[0]}, values: {date}, {originaldate}")
             global invalid_date_count
             invalid_date_count += 1
             return None
 
         try:
             # Required metadata
+            artist = tags['artist'][0]
+            title = tags['title'][0]
             album = tags['album'][0]
+            musicbrainz_recordingid = tags['musicbrainz_recordingid'][0]
             duration = metadata['audio_properties']['length']
 
             # High-level features
@@ -145,6 +141,7 @@ def extract_data_from_json(filepath):
             return None
 
         return Track(
+            musicbrainz_recordingid=musicbrainz_recordingid,
             artist=artist,
             album=album,
             title=title,
@@ -177,8 +174,8 @@ def process_file(json_path):
     return None
 
 # %%
-#highlevel_path = 'acousticbrainz-highlevel-sample-json-20220623/highlevel/'
-highlevel_path = 'acousticbrainz-highlevel-json-20220623/highlevel/'
+highlevel_path = 'acousticbrainz-highlevel-sample-json-20220623/highlevel/'
+#highlevel_path = 'acousticbrainz-highlevel-json-20220623/highlevel/'
 
 
 # test = extract_data_from_json(os.path.join(highlevel_path, '00', '0', '000a9db8-949f-4fa2-9f40-856127df0dbc-0.json'))
