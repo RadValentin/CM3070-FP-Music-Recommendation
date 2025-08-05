@@ -1,7 +1,9 @@
 # %% [markdown]
 # # AcousticBrainz High-Level Sample Data Processing for Music Recommendation System
 # 
-# > The code assumes you have downloaded the AcousticBrainz DB dumps in the same directory, under `acousticbrainz-highlevel-sample-json-20220623-0/highlevel/`. They can be downloaded from here: https://acousticbrainz.org/download
+# > The code assumes you have downloaded and unzipped the AcousticBrainz DB dumps in the same 
+# directory, under `/highlevel/` or `/sample/`. 
+# They can be downloaded from here: https://acousticbrainz.org/download
 
 # %%
 import io
@@ -174,8 +176,9 @@ def process_file(json_path):
     return None
 
 # %%
-highlevel_path = 'acousticbrainz-highlevel-sample-json-20220623/highlevel/'
-#highlevel_path = 'acousticbrainz-highlevel-json-20220623/highlevel/'
+#highlevel_path = 'highlevel/'
+highlevel_path = 'sample/'
+#highlevel_path = 'sample/acousticbrainz-highlevel-sample-json-20220623-0/acousticbrainz-highlevel-sample-json-20220623/highlevel/00/0/'
 
 
 # test = extract_data_from_json(os.path.join(highlevel_path, '00', '0', '000a9db8-949f-4fa2-9f40-856127df0dbc-0.json'))
@@ -186,7 +189,10 @@ json_paths = []
 # walks through a branch of the directory tree, it will look at all subfolders and files recursively
 for root, dirs, files in os.walk(highlevel_path):
     for name in files:
-        json_paths.append(os.path.join(root, name))
+        if name.lower().endswith(".json"):
+            json_paths.append(os.path.join(root, name))
+        else:
+            print(f"Non-json file found: {name}")
 
 # Clean old records
 Track.objects.all().delete()

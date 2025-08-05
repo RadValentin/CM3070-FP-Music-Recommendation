@@ -180,3 +180,5 @@ tfidf_matrix.npy
 acousticbrainz-highlevel-sample-json-20220623/
 acousticbrainz-highlevel-json-20220623/
 acoustic-brainz/output.txt
+acoustic-brainz/highlevel
+acoustic-brainz/sample
