@@ -117,9 +117,9 @@ def extract_data_from_json(filepath):
 
         try:
             # Required metadata
-            artist = tags['artist'][0]
+            artist = tags['artist'][0] if 'artist' in tags else tags['artists'][0]
             title = tags['title'][0]
-            album = tags['album'][0]
+            album = tags.get('albmum', None)
             musicbrainz_recordingid = tags['musicbrainz_recordingid'][0]
             duration = metadata['audio_properties']['length']
 
@@ -136,8 +136,8 @@ def extract_data_from_json(filepath):
             instrumentalness = highlevel['voice_instrumental']['all']['instrumental']
             tonality = highlevel['tonal_atonal']['all']['tonal']
             brightness = highlevel['timbre']['all']['bright']
-        except (KeyError, IndexError, TypeError):
-            print(f'missing data in file: {filepath}')
+        except (KeyError, IndexError, TypeError) as ex:
+            print(f'Missing data in file ({ex}): {filepath}')
             global missing_data_count
             missing_data_count += 1
             return None
