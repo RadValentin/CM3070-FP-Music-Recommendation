@@ -177,8 +177,6 @@ cython_debug/
 tfidf_matrix.npy
 
 # DB dumps from AcousticBrainz used to generate the DB, no need to pollute the repo.
-acousticbrainz-highlevel-sample-json-20220623/
-acousticbrainz-highlevel-json-20220623/
-acoustic-brainz/output.txt
-acoustic-brainz/highlevel
-acoustic-brainz/sample
+backend/scripts/acoustic-brainz/output.txt
+backend/scripts/acoustic-brainz/highlevel/
+backend/scripts/acoustic-brainz/sample/
