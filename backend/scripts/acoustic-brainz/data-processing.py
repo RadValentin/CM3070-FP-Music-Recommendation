@@ -109,7 +109,7 @@ def extract_data_from_json(filepath):
         if not release_date:
             release_date = parse_flexible_date(date)
 
-        if not release_date and (date or originaldate):
+        if not release_date:
             print(f"Missing or invalid date on track: {tags.get('artist', [None])[0]} - {tags.get('title', [None])[0]}, values: {date}, {originaldate}")
             global invalid_date_count
             invalid_date_count += 1
@@ -119,9 +119,10 @@ def extract_data_from_json(filepath):
             # Required metadata
             artist = tags['artist'][0] if 'artist' in tags else tags['artists'][0]
             title = tags['title'][0]
-            album = tags.get('albmum', None)
+            album = tags.get('album', [None])[0]
             musicbrainz_recordingid = tags['musicbrainz_recordingid'][0]
             duration = metadata['audio_properties']['length']
+            country = tags.get('releasecountry', [None])[0]
 
             # High-level features
             genre = highlevel['genre_dortmund']['value']
@@ -149,6 +150,7 @@ def extract_data_from_json(filepath):
             title=title,
             release_date=release_date,
             duration=duration,
+            country=country,
             genre=genre,
             danceability=danceability,
             aggressiveness=aggressiveness,
@@ -176,8 +178,8 @@ def process_file(json_path):
     return None
 
 # %%
-#highlevel_path = 'highlevel/'
-highlevel_path = 'sample/'
+highlevel_path = 'highlevel/'
+#highlevel_path = 'sample/'
 #highlevel_path = 'sample/acousticbrainz-highlevel-sample-json-20220623-0/acousticbrainz-highlevel-sample-json-20220623/highlevel/00/0/'
 
 
