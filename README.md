@@ -3,12 +3,55 @@
 ## Installation
 
 ```bash
-pip install Django numpy pandas scikit-learn djangorestframework
+# install dependencies
+cd backend/
+pip install -r requirements.txt
+```
+
+## (Optional) Building the database from scratch
+Ideally you should have access to the already-built database in SQLite format. If this isn't the case you can replicate using the commands below. The first step is to download all the required DB dumps from other services:
+
+```bash
+# Download DB dumps from AcousticBrainz, these contain the audio features used to determine 
+# song similarity. Link: https://acousticbrainz.org/download
+
+# Sample DB dump with 100k entries, good for development
+cd backend/scripts/acoustic-brainz
+mkdir sample
+cd sample
+wget -P . https://data.metabrainz.org/pub/musicbrainz/acousticbrainz/dumps/acousticbrainz-sample-json-20220623/acousticbrainz-highlevel-sample-json-20220623-0.tar.zst
+
+sudo apt install zstd
+unzstd acousticbrainz-highlevel-sample-json-20220623-0.tar.zst
+
+# Full DB dump with 30M entries, good for production
+cd ..
+mkdir highlevel
+cd highlevel
+wget -r -np -nH --cut-dirs=5 -P . https://data.metabrainz.org/pub/musicbrainz/acousticbrainz/dumps/acousticbrainz-highlevel-json-20220623/
+
+# check that the files downloaded without issues
+sha256sum -c sha256sums
+
+# TODO: Unzip all the archives.
+
 ```
 
 ```bash
-# populate DB
-cd backend/
+# Download DB dumps from MusicBrainz, these contain the metadata needed to display infomation about
+# artists, tracks, albums, etc. Link: https://metabrainz.org/datasets/download
+
+wget -r -np -nH --cut-dirs=5 -P . https://data.metabrainz.org/pub/musicbrainz/data/fullexport/20250806-001852/
+
+md5sum -c MD5SUMS
+
+# TODO: Extend this once DB schema is more mature.
+```
+
+
+```bash
+# Run the script that builds the DB
+cd backend/scripts/acoustic-brainz
 python scripts/populate_db.py
 ```
 
