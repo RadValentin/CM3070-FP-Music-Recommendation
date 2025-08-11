@@ -24,7 +24,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(os.getcwd()))))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "music_recommendation.settings")
 django.setup()
 
-from recommend_api.models import Track
+from recommend_api.models import Track, Artist, TrackArtist
+
+# globals used to track how many records are skipped while processing
+duplicate_count = 0
+invalid_date_count = 0
+missing_data_count = 0
 
 # %%
 
@@ -86,6 +91,34 @@ def parse_flexible_date(date_str):
     except Exception:
         return None
 
+def extract_artist_data(tags):
+    """
+    Returns a list of tuples (artist_id, artist_name)
+    """
+    artist_ids = tags['musicbrainz_artistid']
+
+    # Identify which key contains the artist name (might not all be present), 
+    # we also need to be able to match it to an id.
+    if 'artist' in tags and len(artist_ids) == len(tags['artist']):
+        artist_key = 'artist'
+    elif 'artists' in tags and len(artist_ids) == len(tags['artists']):
+        artist_key = 'artists'
+    elif 'albumartist' in tags and len(artist_ids) == len(tags['albumartist']):
+        artist_key = 'albumartist'
+    else:
+        raise KeyError("No artist key found")
+    
+    artists = []
+
+    # Keep track of all artists inside an index
+    for idx, artist_id in enumerate(artist_ids):
+        # Some tracks have artist ID given as "uuid1/uuid2", we don't need this level of detail
+        artist_id = re.split(r'[;/,\s]+', artist_id)[0]
+
+        artists.append((artist_id, tags[artist_key][idx]))
+    
+    return artists
+
 def extract_data_from_json(filepath):
     """
     Returns a dict with values for corresponding audio features from the AcousticBrainz dataset.
@@ -116,75 +149,54 @@ def extract_data_from_json(filepath):
             return None
 
         try:
-            # Required metadata
-            artist = tags['artist'][0] if 'artist' in tags else tags['artists'][0]
-            title = tags['title'][0]
-            album = tags.get('album', [None])[0]
-            musicbrainz_recordingid = tags['musicbrainz_recordingid'][0]
-            duration = metadata['audio_properties']['length']
-            country = tags.get('releasecountry', [None])[0]
+            # Create a new track entry using the data from JSON
+            track = Track(
+                # Required metadata
+                musicbrainz_recordingid=tags['musicbrainz_recordingid'][0],
+                album=tags.get('album', [None])[0],
+                title=tags['title'][0],
+                release_date=release_date,
+                duration=metadata['audio_properties']['length'],
+                country=tags.get('releasecountry', [None])[0],
+                # High-level features
+                genre=highlevel['genre_dortmund']['value'],
+                danceability=highlevel['danceability']['all']['danceable'],
+                aggressiveness=highlevel['mood_aggressive']['all']['aggressive'],
+                happiness=highlevel['mood_happy']['all']['happy'],
+                sadness=highlevel['mood_sad']['all']['sad'],
+                relaxedness=highlevel['mood_relaxed']['all']['relaxed'],
+                partyness=highlevel['mood_party']['all']['party'],
+                acousticness=highlevel['mood_acoustic']['all']['acoustic'],
+                electronicness=highlevel['mood_electronic']['all']['electronic'],
+                instrumentalness=highlevel['voice_instrumental']['all']['instrumental'],
+                tonality=highlevel['tonal_atonal']['all']['tonal'],
+                brightness=highlevel['timbre']['all']['bright'],
+            )
 
-            # High-level features
-            genre = highlevel['genre_dortmund']['value']
-            danceability = highlevel['danceability']['all']['danceable']
-            aggressiveness = highlevel['mood_aggressive']['all']['aggressive']
-            happiness = highlevel['mood_happy']['all']['happy']
-            sadness = highlevel['mood_sad']['all']['sad']
-            relaxedness = highlevel['mood_relaxed']['all']['relaxed']
-            partyness = highlevel['mood_party']['all']['party']
-            acousticness = highlevel['mood_acoustic']['all']['acoustic']
-            electronicness = highlevel['mood_electronic']['all']['electronic']
-            instrumentalness = highlevel['voice_instrumental']['all']['instrumental']
-            tonality = highlevel['tonal_atonal']['all']['tonal']
-            brightness = highlevel['timbre']['all']['bright']
+            artist_pairs  = extract_artist_data(tags=tags)
+            # Return track info along with associated artists (id, name)
+            return track, artist_pairs
+    
         except (KeyError, IndexError, TypeError) as ex:
-            print(f'Missing data in file ({ex}): {filepath}')
+            print(f'Missing data in file ({ex}): {os.path.normpath(filepath)}')
             global missing_data_count
             missing_data_count += 1
             return None
-
-        return Track(
-            musicbrainz_recordingid=musicbrainz_recordingid,
-            artist=artist,
-            album=album,
-            title=title,
-            release_date=release_date,
-            duration=duration,
-            country=country,
-            genre=genre,
-            danceability=danceability,
-            aggressiveness=aggressiveness,
-            happiness=happiness,
-            sadness=sadness,
-            relaxedness=relaxedness,
-            partyness=partyness,
-            acousticness=acousticness,
-            electronicness=electronicness,
-            instrumentalness=instrumentalness,
-            tonality=tonality,
-            brightness=brightness,
-        )
 
 def process_file(json_path):
     """
     Utility function for loading and parsing JSON files in parallel
     """
-    record = extract_data_from_json(json_path)
-    if record is not None:
-        # Extract the ID portion (before the last '-') to group submissions
-        basename = os.path.basename(json_path)
-        track_id = '-'.join(basename.split('-')[:-1])
-        return (track_id, record)
-    return None
+    try:
+        return extract_data_from_json(json_path)
+    except Exception as ex:
+        print(f'Could not process file ({ex}): {os.path.normpath(json_path)}')
+        return None
 
 # %%
-highlevel_path = 'highlevel/'
-#highlevel_path = 'sample/'
+#highlevel_path = 'highlevel/'
+highlevel_path = 'sample/'
 #highlevel_path = 'sample/acousticbrainz-highlevel-sample-json-20220623-0/acousticbrainz-highlevel-sample-json-20220623/highlevel/00/0/'
-
-
-# test = extract_data_from_json(os.path.join(highlevel_path, '00', '0', '000a9db8-949f-4fa2-9f40-856127df0dbc-0.json'))
-# pprint(test)
 
 json_paths = []
 
@@ -194,23 +206,24 @@ for root, dirs, files in os.walk(highlevel_path):
         if name.lower().endswith(".json"):
             json_paths.append(os.path.join(root, name))
         else:
-            print(f"Non-json file found: {name}")
+            print(f"Non-JSON file skipped: {name}")
 
 # Clean old records
+TrackArtist.objects.all().delete()
 Track.objects.all().delete()
+Artist.objects.all().delete()
 
 
 # %%
 
 start = time.time()
 
-#json_paths = json_paths[0:1000]
+json_paths = json_paths[0:1000]
 print(f"Will load {len(json_paths)} records")
 
-unique_records = {}
-duplicate_count = 0
-invalid_date_count = 0
-missing_data_count = 0
+artist_index = {}
+track_index = {}
+trackartist_list = []
 # cpu_threads = os.cpu_count() or 4
 # max_workers = cpu_threads * 2
 with ThreadPoolExecutor(max_workers=8) as executor:
@@ -220,16 +233,30 @@ with ThreadPoolExecutor(max_workers=8) as executor:
     futures = [executor.submit(process_file, path) for path in json_paths]
     for future in futures:
         result = future.result()
-        if result:
-            track_id, record = result
-            # Use a hashmap to check if the track has been already added (from another submission), 
-            # only load it if that submission failed (missing data)
-            if track_id not in unique_records or unique_records[track_id] is None:
-                unique_records[track_id] = record
-            else:
-                duplicate_count += 1
+        if not result:
+            continue
 
-records = list(unique_records.values())
+        track, artist_pairs = result
+        track_id = track.musicbrainz_recordingid
+
+        # Use a hashmap to check if the track has been already added (from another submission), 
+        # only load it if that submission failed (missing data)
+        if track_id not in track_index or track_index[track_id] is None:
+            track_index[track_id] = track
+        else:
+            duplicate_count += 1
+            continue
+
+        # Store artist data in a separate hashmap and associtate it with the track
+        for artist_id, artist_name in artist_pairs:
+            if artist_id not in artist_index or artist_index[artist_id] is None:
+                artist_index[artist_id] = Artist(musicbrainz_artistid=artist_id, name=artist_name)
+            trackartist_list.append(
+                TrackArtist(artist=artist_index[artist_id], track=track)
+            )
+
+
+track_list = list(track_index.values())
 end = time.time()
 print(f"Finished loading records into memory in {end - start:.2f}s, now running the ORM inserts.")
 print(f"Found {duplicate_count} duplicate submissions.")
@@ -239,14 +266,20 @@ print(f"Found {missing_data_count} submissions with missing data.")
 start = time.time()
 batch_size = 2000
 
-for i in range(0, len(records), batch_size):
-    print(f'{i}/{len(records)} processed')
+for i in range(0, len(track_list), batch_size):
+    print(f'{i}/{len(track_list)} processed')
     start_batch = time.time()
-    Track.objects.bulk_create(records[i:i+batch_size])
+    Track.objects.bulk_create(track_list[i:i+batch_size])
     print(f'Batch took {time.time() - start_batch:.2f} seconds')
 
 end = time.time()
-print(f"Inserted {len(records)} records in {end - start:.2f} seconds")
+print(f"Inserted {len(track_list)} records in {end - start:.2f} seconds")
+
+start = time.time()
+Artist.objects.bulk_create(artist_index.values())
+TrackArtist.objects.bulk_create(trackartist_list)
+print(f"Inserted artists and linked them to tracks in {end - start:.2f} seconds")
+end = time.time()
 
 print("DONE")
 
