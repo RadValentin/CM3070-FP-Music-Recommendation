@@ -1,4 +1,4 @@
-# # AcousticBrainz High-Level Sample Data Processing for Music Recommendation System
+# Data Processing for Music Recommendation System
 # 
 # > The code assumes you have downloaded and unzipped the AcousticBrainz DB dumps in the same 
 # directory, under `/highlevel/` or `/sample/`. 
@@ -13,13 +13,14 @@ import django
 import time
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import StandardScaler
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from pprint import pprint
 
 # Ensure print output is UTF-8 formatted so it can be logged to a file
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
+# Django setup so we can access ORM models
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(os.getcwd()))))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "music_recommendation.settings")
 django.setup()
@@ -134,7 +135,7 @@ def extract_album_info(tags):
         invalid_date_count += 1
         raise ValueError(f"Missing or invalid date on track: {tags.get('artist', [None])[0]} - {tags.get('title', [None])[0]}, values: {date}, {originaldate}")
     
-    return (tags['musicbrainz_albumid'][0], tags.get('album', [None])[0], release_date)
+    return (tags['musicbrainz_albumid'][0], tags['album'][0], release_date)
 
 def extract_data_from_json(filepath):
     """
@@ -162,7 +163,8 @@ def extract_data_from_json(filepath):
                 musicbrainz_recordingid=tags['musicbrainz_recordingid'][0],
                 title=tags['title'][0],
                 duration=metadata['audio_properties']['length'],
-                genre=highlevel['genre_dortmund']['value'],
+                genre=highlevel['genre_rosamerica']['value'],
+                file_path=os.path.normpath(filepath)
             )
 
             artist_pairs  = extract_artist_info(tags=tags)
@@ -210,8 +212,8 @@ Track.objects.all().delete()
 Artist.objects.all().delete()
 
 # Different directories where AcousticBrainz data is stored
-#highlevel_path = 'highlevel/' # 1M records
-highlevel_path = 'sample/' # 100k records
+highlevel_path = 'highlevel/' # 1M records
+#highlevel_path = 'sample/' # 100k records
 
 # paths to JSON files, each containting metadata and high-level features for one track
 json_paths = [] 
@@ -227,7 +229,7 @@ for root, dirs, files in os.walk(highlevel_path):
 
 start = time.time()
 
-json_paths = json_paths[0:1000] # use only a subset of the data, for debugging
+#json_paths = json_paths[0:1000] # use only a subset of the data, for debugging
 print(f"Will load {len(json_paths)} records")
 
 album_index = {} # keep track of unique album names, indexed by MBID
@@ -278,10 +280,7 @@ with ThreadPoolExecutor(max_workers=8) as executor:
             albumartist_set.add((album_id, artist_id))
         
         # Store the track audio features along with the MBID of the track they're for
-        track_features_list.append({
-            "musicbrainz_recordingid": str(track.musicbrainz_recordingid),
-            "features": track_features 
-        })    
+        track_features_list.append([track.musicbrainz_recordingid] + track_features)    
 
 
 track_list = list(track_index.values())
@@ -334,11 +333,16 @@ df[feature_cols] = df[feature_cols].astype(np.float32)
 # separate indexes from features
 feature_ids = df["mbid"].to_numpy()
 feature_matrix = df[feature_cols].to_numpy(dtype=np.float32)
+
+# Scale values so they're more spread out, fixes skewed distribution
+scaler = StandardScaler(with_mean=True, with_std=True).fit(feature_matrix)
+feature_matrix_scaled = scaler.transform(feature_matrix).astype(np.float32)
+
 # L2 normalize each row for cosine similarity later on
-feature_matrix /= (np.linalg.norm(feature_matrix, axis=1, keepdims=True) + 1e-12)
+feature_matrix_scaled /= (np.linalg.norm(feature_matrix_scaled, axis=1, keepdims=True) + 1e-8)
 
 # save vectors with values for audio features of tracks
-np.save("feature_matrix.npy", feature_matrix) 
+np.save("feature_matrix.npy", feature_matrix_scaled) 
 # save mapping from MusicBrainz ID to indexes in feature matrix
 np.save("mbid_to_feature_index.npy", feature_ids)
 print(f"Exported feature matrix and indexes in {end - start:.2f} seconds")

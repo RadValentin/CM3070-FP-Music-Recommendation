@@ -2,12 +2,12 @@ from django.db import models
 
 
 class Artist(models.Model):
-    musicbrainz_artistid = models.UUIDField(primary_key=True) 
+    musicbrainz_artistid = models.CharField(primary_key=True, max_length=255) 
     name = models.CharField(max_length=255)
 
 
 class Album(models.Model):
-    musicbrainz_albumid = models.UUIDField(primary_key=True) 
+    musicbrainz_albumid = models.CharField(primary_key=True, max_length=255) 
     name = models.CharField(max_length=255)
     artists = models.ManyToManyField(Artist, through="AlbumArtist")    
     date = models.DateField()
@@ -25,12 +25,13 @@ class AlbumArtist(models.Model):
         unique_together = [('artist', 'album')]
 
 class Track(models.Model):
-    musicbrainz_recordingid = models.UUIDField(primary_key=True)
+    musicbrainz_recordingid = models.CharField(primary_key=True, max_length=255)
     album = models.ForeignKey(Album, on_delete=models.CASCADE, null=True, blank=True)
     artists = models.ManyToManyField(Artist, through="TrackArtist")
     title = models.CharField(max_length=255)
     duration = models.FloatField()
     genre = models.CharField(max_length=255)
+    file_path = models.CharField(max_length=1024)
     
     # danceability = models.FloatField()
     # aggressiveness = models.FloatField()
