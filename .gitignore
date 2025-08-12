@@ -175,6 +175,8 @@ cython_debug/
 
 # Project-specific files
 tfidf_matrix.npy
+feature_matrix.npy
+mbid_to_feature_index.npy
 
 # DB dumps from AcousticBrainz used to generate the DB, no need to pollute the repo.
 backend/scripts/acoustic-brainz/output.txt

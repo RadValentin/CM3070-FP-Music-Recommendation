@@ -12,6 +12,7 @@ import json
 import django
 import time
 import numpy as np
+import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pprint import pprint
@@ -141,6 +142,7 @@ def extract_data_from_json(filepath):
     track - a Django model instance populated with track metadata + high-level features
     artist_pairs - a list of tuples (artist_id, artist_name), the artists for the track
     album_info - a list of tuples (album_id, album_name, release_date), the album the track is on
+    track_features - a list of high-level audio features
     """
     with open(filepath, 'r') as f:
         try:
@@ -160,25 +162,28 @@ def extract_data_from_json(filepath):
                 musicbrainz_recordingid=tags['musicbrainz_recordingid'][0],
                 title=tags['title'][0],
                 duration=metadata['audio_properties']['length'],
-                # High-level features
                 genre=highlevel['genre_dortmund']['value'],
-                danceability=highlevel['danceability']['all']['danceable'],
-                aggressiveness=highlevel['mood_aggressive']['all']['aggressive'],
-                happiness=highlevel['mood_happy']['all']['happy'],
-                sadness=highlevel['mood_sad']['all']['sad'],
-                relaxedness=highlevel['mood_relaxed']['all']['relaxed'],
-                partyness=highlevel['mood_party']['all']['party'],
-                acousticness=highlevel['mood_acoustic']['all']['acoustic'],
-                electronicness=highlevel['mood_electronic']['all']['electronic'],
-                instrumentalness=highlevel['voice_instrumental']['all']['instrumental'],
-                tonality=highlevel['tonal_atonal']['all']['tonal'],
-                brightness=highlevel['timbre']['all']['bright'],
             )
 
             artist_pairs  = extract_artist_info(tags=tags)
             album_info = extract_album_info(tags=tags)
 
-            return track, artist_pairs, album_info
+            # High-level features
+            track_features = [
+                highlevel['danceability']['all']['danceable'], #danceability
+                highlevel['mood_aggressive']['all']['aggressive'], #aggressiveness
+                highlevel['mood_happy']['all']['happy'], #happiness
+                highlevel['mood_sad']['all']['sad'], #sadness
+                highlevel['mood_relaxed']['all']['relaxed'], #relaxedness
+                highlevel['mood_party']['all']['party'], #partyness
+                highlevel['mood_acoustic']['all']['acoustic'], #acousticness
+                highlevel['mood_electronic']['all']['electronic'], #electronicness
+                highlevel['voice_instrumental']['all']['instrumental'], #instrumentalness
+                highlevel['tonal_atonal']['all']['tonal'], #tonality
+                highlevel['timbre']['all']['bright'], #brightness
+            ]
+
+            return track, artist_pairs, album_info, track_features
     
         except (KeyError, IndexError, TypeError) as ex:
             print(f'Missing data in file ({ex}): {os.path.normpath(filepath)}')
@@ -222,7 +227,7 @@ for root, dirs, files in os.walk(highlevel_path):
 
 start = time.time()
 
-#json_paths = json_paths[0:1000] # use only a subset of the data, for debugging
+json_paths = json_paths[0:1000] # use only a subset of the data, for debugging
 print(f"Will load {len(json_paths)} records")
 
 album_index = {} # keep track of unique album names, indexed by MBID
@@ -230,6 +235,7 @@ artist_index = {} # keep track of unique artist names, indexed by MBID
 track_index = {} # keep track of unique track data, indexed by MBID
 trackartist_set = set() # set of all Track-Artist M2M pairings, to avoid duplication
 albumartist_set = set() # set of all Album-Artist M2M pairings
+track_features_list = [] 
 
 # cpu_threads = os.cpu_count() or 4
 # max_workers = cpu_threads * 2
@@ -243,7 +249,7 @@ with ThreadPoolExecutor(max_workers=8) as executor:
         if not result:
             continue
 
-        track, artist_pairs, album_info = result
+        track, artist_pairs, album_info, track_features = result
         track_id = track.musicbrainz_recordingid
 
         # Use a hashmap to check if the track has been already added (from another submission), 
@@ -270,7 +276,12 @@ with ThreadPoolExecutor(max_workers=8) as executor:
             
             track.album = album_index[album_id]
             albumartist_set.add((album_id, artist_id))
-            
+        
+        # Store the track audio features along with the MBID of the track they're for
+        track_features_list.append({
+            "musicbrainz_recordingid": str(track.musicbrainz_recordingid),
+            "features": track_features 
+        })    
 
 
 track_list = list(track_index.values())
@@ -310,6 +321,27 @@ for album_id, artist_id in albumartist_set:
     albumartist_list.append(AlbumArtist(artist=artist_index[artist_id], album=album_index[album_id]))
 AlbumArtist.objects.bulk_create(albumartist_list)
 print(f"Inserted M2M pairings for TrackArtist and AlbumArtist in {end - start:.2f} seconds")
+end = time.time()
+
+start = time.time()
+# Load the track audio features into a DataFrame and then export, keeping track 
+# of how MBIS map to indexes in the feature matrix.
+feature_cols = ["danceability","aggressiveness","happiness","sadness","relaxedness","partyness",
+                "acousticness","electronicness","instrumentalness","tonality","brightness"]
+df = pd.DataFrame(track_features_list, columns=["mbid", *feature_cols])
+df[feature_cols] = df[feature_cols].astype(np.float32)
+
+# separate indexes from features
+feature_ids = df["mbid"].to_numpy()
+feature_matrix = df[feature_cols].to_numpy(dtype=np.float32)
+# L2 normalize each row for cosine similarity later on
+feature_matrix /= (np.linalg.norm(feature_matrix, axis=1, keepdims=True) + 1e-12)
+
+# save vectors with values for audio features of tracks
+np.save("feature_matrix.npy", feature_matrix) 
+# save mapping from MusicBrainz ID to indexes in feature matrix
+np.save("mbid_to_feature_index.npy", feature_ids)
+print(f"Exported feature matrix and indexes in {end - start:.2f} seconds")
 end = time.time()
 
 print("DONE")
