@@ -1,11 +1,9 @@
-# %% [markdown]
 # # AcousticBrainz High-Level Sample Data Processing for Music Recommendation System
 # 
 # > The code assumes you have downloaded and unzipped the AcousticBrainz DB dumps in the same 
 # directory, under `/highlevel/` or `/sample/`. 
 # They can be downloaded from here: https://acousticbrainz.org/download
 
-# %%
 import io
 import os
 import re
@@ -13,6 +11,7 @@ import sys
 import json
 import django
 import time
+import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pprint import pprint
@@ -31,7 +30,6 @@ duplicate_count = 0
 invalid_date_count = 0
 missing_data_count = 0
 
-# %%
 
 def parse_flexible_date(date_str):
     """
@@ -109,18 +107,19 @@ def extract_artist_info(tags):
         raise KeyError("No artist key found")
     
     artists = []
-
     # Keep track of all artists inside an index
     for idx, artist_id in enumerate(artist_ids):
         # Some tracks have artist ID given as "uuid1/uuid2", we don't need this level of detail
         artist_id = re.split(r'[;/,\s]+', artist_id)[0]
-
         artists.append((artist_id, tags[artist_key][idx]))
     
     return artists
 
 
 def extract_album_info(tags):
+    """
+    Returns a list of tuples (album_id, album_name, release_date)
+    """
     # Date parsing, look through multiple fields to increase chances of finding a valid date
     date = tags.get('date', [None])[0]
     originaldate = tags.get('originaldate', [None])[0]
@@ -134,12 +133,14 @@ def extract_album_info(tags):
         invalid_date_count += 1
         raise ValueError(f"Missing or invalid date on track: {tags.get('artist', [None])[0]} - {tags.get('title', [None])[0]}, values: {date}, {originaldate}")
     
-    # Return (album_id, album_name, release_date)
     return (tags['musicbrainz_albumid'][0], tags.get('album', [None])[0], release_date)
 
 def extract_data_from_json(filepath):
     """
-    Returns a dict with values for corresponding audio features from the AcousticBrainz dataset.
+    Returns a list of tuples:
+    track - a Django model instance populated with track metadata + high-level features
+    artist_pairs - a list of tuples (artist_id, artist_name), the artists for the track
+    album_info - a list of tuples (album_id, album_name, release_date), the album the track is on
     """
     with open(filepath, 'r') as f:
         try:
@@ -176,7 +177,7 @@ def extract_data_from_json(filepath):
 
             artist_pairs  = extract_artist_info(tags=tags)
             album_info = extract_album_info(tags=tags)
-            # Return track info along with associated artists (id, name)
+
             return track, artist_pairs, album_info
     
         except (KeyError, IndexError, TypeError) as ex:
@@ -195,12 +196,20 @@ def process_file(json_path):
         print(f'Could not process file ({ex}): {os.path.normpath(json_path)}')
         return None
 
-# %%
-#highlevel_path = 'highlevel/'
-highlevel_path = 'sample/'
-#highlevel_path = 'sample/acousticbrainz-highlevel-sample-json-20220623-0/acousticbrainz-highlevel-sample-json-20220623/highlevel/00/0/'
 
-json_paths = []
+# Clean old records
+AlbumArtist.objects.all().delete()
+Album.objects.all().delete()
+TrackArtist.objects.all().delete()
+Track.objects.all().delete()
+Artist.objects.all().delete()
+
+# Different directories where AcousticBrainz data is stored
+#highlevel_path = 'highlevel/' # 1M records
+highlevel_path = 'sample/' # 100k records
+
+# paths to JSON files, each containting metadata and high-level features for one track
+json_paths = [] 
 
 # walks through a branch of the directory tree, it will look at all subfolders and files recursively
 for root, dirs, files in os.walk(highlevel_path):
@@ -210,19 +219,10 @@ for root, dirs, files in os.walk(highlevel_path):
         else:
             print(f"Non-JSON file skipped: {name}")
 
-# Clean old records
-AlbumArtist.objects.all().delete()
-Album.objects.all().delete()
-TrackArtist.objects.all().delete()
-Track.objects.all().delete()
-Artist.objects.all().delete()
-
-
-# %%
 
 start = time.time()
 
-#json_paths = json_paths[0:1000]
+#json_paths = json_paths[0:1000] # use only a subset of the data, for debugging
 print(f"Will load {len(json_paths)} records")
 
 album_index = {} # keep track of unique album names, indexed by MBID
@@ -306,10 +306,10 @@ for track_id, artist_id in trackartist_set:
 TrackArtist.objects.bulk_create(trackartist_list)
 
 albumartist_list = []
-for album_id, artist_id in albumartist_list:
+for album_id, artist_id in albumartist_set:
     albumartist_list.append(AlbumArtist(artist=artist_index[artist_id], album=album_index[album_id]))
 AlbumArtist.objects.bulk_create(albumartist_list)
-print(f"Inserted M2M pairing for TrackArtist and AlbumArtist in {end - start:.2f} seconds")
+print(f"Inserted M2M pairings for TrackArtist and AlbumArtist in {end - start:.2f} seconds")
 end = time.time()
 
 print("DONE")
