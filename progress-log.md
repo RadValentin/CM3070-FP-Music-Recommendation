@@ -33,6 +33,15 @@
 - Research ISMIR and recommender systems
 ### 30 July
 - TODO: Read `A Historical Survey of Music Recommendation Systems - Towards Evaluation.pdf`
+### 11 August
+- Normalize database by extracting Artist and Album information from Tracks to their own models
+### 12 August
+- Store information about high-level features (acousticness, danceability) in vector files instead of in the DB
+- Implement a script that makes recommendations based on the cosine similarity of audio features
+- Notice that tracks are tagged imprecisely when it comes to genre(eg. Metallica tagged as electronic music)
+- Genre and decade prefiltering will be needed to increase accuracy
+### 13 August
+- Update the DB build script so that for tracks that have duplicates we select the most common values for genre and high-level features instead defaulting to the 1st submission and discarding the rest.
 
 ### TODO
 - Cover the module materials

@@ -13,6 +13,7 @@ import django
 import time
 import numpy as np
 import pandas as pd
+from collections import Counter
 from sklearn.preprocessing import StandardScaler
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -139,11 +140,11 @@ def extract_album_info(tags):
 
 def extract_data_from_json(filepath):
     """
-    Returns a list of tuples:
-    track - a Django model instance populated with track metadata + high-level features
+    Returns a track dictionary with:
+    metadata - musicbrainz_recordingid, title, duration, etc.
+    high-level features - danceability, aggressiveness, etc.
     artist_pairs - a list of tuples (artist_id, artist_name), the artists for the track
     album_info - a list of tuples (album_id, album_name, release_date), the album the track is on
-    track_features - a list of high-level audio features
     """
     with open(filepath, 'r') as f:
         try:
@@ -158,34 +159,33 @@ def extract_data_from_json(filepath):
 
         try:
             # Create a new track entry using the data from JSON
-            track = Track(
+            track = {
                 # Required metadata
-                musicbrainz_recordingid=tags['musicbrainz_recordingid'][0],
-                title=tags['title'][0],
-                duration=metadata['audio_properties']['length'],
-                genre=highlevel['genre_rosamerica']['value'],
-                file_path=os.path.normpath(filepath)
-            )
+                "musicbrainz_recordingid": tags['musicbrainz_recordingid'][0],
+                "title": tags['title'][0],
+                "duration": metadata['audio_properties']['length'],
+                "genre_dortmund": highlevel['genre_dortmund']['value'],
+                "genre_rosamerica": highlevel['genre_rosamerica']['value'],
+                "file_path": os.path.normpath(filepath),
+                # High-level features
+                "danceability": highlevel['danceability']['all']['danceable'], 
+                "aggressiveness": highlevel['mood_aggressive']['all']['aggressive'], 
+                "happiness": highlevel['mood_happy']['all']['happy'], 
+                "sadness": highlevel['mood_sad']['all']['sad'], 
+                "relaxedness": highlevel['mood_relaxed']['all']['relaxed'], 
+                "partyness": highlevel['mood_party']['all']['party'], 
+                "acousticness": highlevel['mood_acoustic']['all']['acoustic'], 
+                "electronicness": highlevel['mood_electronic']['all']['electronic'], 
+                "instrumentalness": highlevel['voice_instrumental']['all']['instrumental'], 
+                "tonality": highlevel['tonal_atonal']['all']['tonal'], 
+                "brightness": highlevel['timbre']['all']['bright'], 
+            }
 
-            artist_pairs  = extract_artist_info(tags=tags)
-            album_info = extract_album_info(tags=tags)
+            # Associate artists and album with the track
+            track["artist_pairs"]  = extract_artist_info(tags=tags)
+            track["album_info"] = extract_album_info(tags=tags)
 
-            # High-level features
-            track_features = [
-                highlevel['danceability']['all']['danceable'], #danceability
-                highlevel['mood_aggressive']['all']['aggressive'], #aggressiveness
-                highlevel['mood_happy']['all']['happy'], #happiness
-                highlevel['mood_sad']['all']['sad'], #sadness
-                highlevel['mood_relaxed']['all']['relaxed'], #relaxedness
-                highlevel['mood_party']['all']['party'], #partyness
-                highlevel['mood_acoustic']['all']['acoustic'], #acousticness
-                highlevel['mood_electronic']['all']['electronic'], #electronicness
-                highlevel['voice_instrumental']['all']['instrumental'], #instrumentalness
-                highlevel['tonal_atonal']['all']['tonal'], #tonality
-                highlevel['timbre']['all']['bright'], #brightness
-            ]
-
-            return track, artist_pairs, album_info, track_features
+            return track
     
         except (KeyError, IndexError, TypeError) as ex:
             print(f'Missing data in file ({ex}): {os.path.normpath(filepath)}')
@@ -203,6 +203,7 @@ def process_file(json_path):
         print(f'Could not process file ({ex}): {os.path.normpath(json_path)}')
         return None
 
+# Phase 1 - Load JSON data about tracks into memory
 
 # Clean old records
 AlbumArtist.objects.all().delete()
@@ -212,14 +213,14 @@ Track.objects.all().delete()
 Artist.objects.all().delete()
 
 # Different directories where AcousticBrainz data is stored
-highlevel_path = 'highlevel/' # 1M records
-#highlevel_path = 'sample/' # 100k records
+#dataset_path = 'highlevel/' # 1M records
+dataset_path = 'sample/' # 100k records
 
 # paths to JSON files, each containting metadata and high-level features for one track
 json_paths = [] 
 
 # walks through a branch of the directory tree, it will look at all subfolders and files recursively
-for root, dirs, files in os.walk(highlevel_path):
+for root, dirs, files in os.walk(dataset_path):
     for name in files:
         if name.lower().endswith(".json"):
             json_paths.append(os.path.join(root, name))
@@ -251,40 +252,95 @@ with ThreadPoolExecutor(max_workers=8) as executor:
         if not result:
             continue
 
-        track, artist_pairs, album_info, track_features = result
-        track_id = track.musicbrainz_recordingid
-
+        track_id = result["musicbrainz_recordingid"]
         # Use a hashmap to check if the track has been already added (from another submission), 
         # only load it if that submission failed (missing data)
         if track_id not in track_index or track_index[track_id] is None:
-            track_index[track_id] = track
+            track_index[track_id] = [result]
         else:
             duplicate_count += 1
+            track_index[track_id].append(result)
+
+
+## Phase 2 - Merge duplicate entries for tracks by selecting the most common value for each field
+merged_tracks = {}
+
+# On which fields to select the most common value
+MERGE_FIELDS = [
+    "genre_dortmund", "genre_rosamerica",
+    "danceability", "aggressiveness", "happiness", "sadness",
+    "relaxedness", "partyness", "acousticness", "electronicness",
+    "instrumentalness", "tonality", "brightness"
+]
+
+for mbid, tracks in track_index.items():
+    if not tracks:
+        continue
+    
+    # Use a track as a base for fields that won't be selected
+    base_track = tracks[0]
+    
+    merged_track = {}
+    for field in MERGE_FIELDS:
+        values = [t[field] for t in tracks if t.get(field) is not None]
+        if values:
+            merged_track[field] = Counter(values).most_common(1)[0][0]
+        else:
+            merged_track[field] = None
+    
+    # Use values from the base track + values selected by most common
+    merged_track = base_track | merged_track
+    merged_tracks[mbid] = merged_track
+
+track_index = merged_tracks
+
+
+## Phase 3 - Build the DB models
+track_list = []
+
+MODEL_FIELDS = ["musicbrainz_recordingid", "title", "duration", "genre_dortmund", "genre_rosamerica", "file_path"]
+FEATURE_FIELDS = [
+    "danceability", "aggressiveness", "happiness", "sadness",
+    "relaxedness", "partyness", "acousticness", "electronicness",
+    "instrumentalness", "tonality", "brightness"
+]
+
+for track_id, track in track_index.items():
+    artist_pairs = track["artist_pairs"]
+    album_info = track["album_info"]
+
+    track_obj = Track(
+        musicbrainz_recordingid=track["musicbrainz_recordingid"],
+        title=track["title"],
+        duration=track["duration"],
+        genre_dortmund=track["genre_dortmund"],
+        genre_rosamerica=track["genre_rosamerica"],
+        file_path=track["file_path"]
+    )
+    track_list.append(track_obj)
+
+    for artist_id, artist_name in artist_pairs:
+        # Store artist data in a separate hashmap and associtate it with the track
+        if artist_id not in artist_index or artist_index[artist_id] is None:
+            artist_index[artist_id] = Artist(musicbrainz_artistid=artist_id, name=artist_name)
+        trackartist_set.add((track_id, artist_id))
+
+        # Associate track with album, album with artist
+        if not album_info:
             continue
-
-        for artist_id, artist_name in artist_pairs:
-            # Store artist data in a separate hashmap and associtate it with the track
-            if artist_id not in artist_index or artist_index[artist_id] is None:
-                artist_index[artist_id] = Artist(musicbrainz_artistid=artist_id, name=artist_name)
-            trackartist_set.add((track_id, artist_id))
-
-            # Associate track with album, album with artist
-            if not album_info:
-                continue
-            album_id, album_name, date = album_info
-            
-            if album_id not in album_index or album_index[album_id] is None:
-                album_index[album_id] = Album(musicbrainz_albumid=album_id, name=album_name, date=date)
-            
-            track.album = album_index[album_id]
-            albumartist_set.add((album_id, artist_id))
+        album_id, album_name, date = album_info
         
-        # Store the track audio features along with the MBID of the track they're for
-        track_features_list.append([track.musicbrainz_recordingid] + track_features)    
-
-
-track_list = list(track_index.values())
+        if album_id not in album_index or album_index[album_id] is None:
+            album_index[album_id] = Album(musicbrainz_albumid=album_id, name=album_name, date=date)
+        
+        track_obj.album = album_index[album_id]
+        albumartist_set.add((album_id, artist_id))
+    
+    # Store the track audio features along with the MBID of the track they're for
+    track_features = [track.get(field) for field in FEATURE_FIELDS]
+    track_features_list.append([track["musicbrainz_recordingid"]] + track_features)    
 end = time.time()
+
 print(f"Finished loading records into memory in {end - start:.2f}s, now running the ORM inserts.")
 print(f"Found {duplicate_count} duplicate submissions.")
 print(f"Found {invalid_date_count} submissions with invalid dates.")
@@ -312,7 +368,7 @@ start = time.time()
 # M2M pairing were stored as sets to avoid dulication, convert them to lists and create objects.
 trackartist_list = []
 for track_id, artist_id in trackartist_set:
-    trackartist_list.append(TrackArtist(artist=artist_index[artist_id], track=track_index[track_id]))
+    trackartist_list.append(TrackArtist(artist=artist_index[artist_id], track_id=track_id))
 TrackArtist.objects.bulk_create(trackartist_list)
 
 albumartist_list = []
@@ -321,6 +377,8 @@ for album_id, artist_id in albumartist_set:
 AlbumArtist.objects.bulk_create(albumartist_list)
 print(f"Inserted M2M pairings for TrackArtist and AlbumArtist in {end - start:.2f} seconds")
 end = time.time()
+
+# Phase 4 - Save data about audio features into vector files
 
 start = time.time()
 # Load the track audio features into a DataFrame and then export, keeping track 

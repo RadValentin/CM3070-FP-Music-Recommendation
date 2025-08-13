@@ -30,7 +30,8 @@ class Track(models.Model):
     artists = models.ManyToManyField(Artist, through="TrackArtist")
     title = models.CharField(max_length=255)
     duration = models.FloatField()
-    genre = models.CharField(max_length=255)
+    genre_dortmund = models.CharField(max_length=255)
+    genre_rosamerica = models.CharField(max_length=255)
     file_path = models.CharField(max_length=1024)
     
     # danceability = models.FloatField()
