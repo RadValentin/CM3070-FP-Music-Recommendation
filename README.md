@@ -133,3 +133,34 @@ An insightful overview of recommendation approaches and the data that is availab
 An API that recommends based on well-chosen parameters.  
 A web application that provides an interactive music playing experience.  
 Strong user testing and reflection on the results of it (ideally, modifications based on user testing, which are themselves tested).
+
+## Utilities
+- MusicBrainz recording: https://musicbrainz.org/recording/87f40400-1009-4578-991f-421c1ad330eb (Enter Sandman by Metallica)
+
+Recommendation script output, `python test3.py --mbid=87f40400-1009-4578-991f-421c1ad330eb`
+```
+diag full: mean=-0.037 std=0.459 p95=0.825 max=0.987
+diag prefilter[55022]: mean=0.003 std=0.451 p95=0.841 max=0.987
+Vector search (prefilter[55022]) took 0.002s
+
+Tracks similar to: Metallica - All Nightmare Long:
+ 1. Dominici — King of Terror [5566272d-0e5b-474a-bbd4-474a7ecd0699]  (cos=0.973, final=1.131, year=2008, genre=electronic)
+ 2. Revocation — Alliance in Tyranny [a22bc7c3-f731-456d-a77c-f80b21c0f3e8]  (cos=0.969, final=1.129, year=2008, genre=electronic)
+ 3. Manowar — Die for Metal [c7f95302-8ffd-484b-9808-1bc5cd1965c4]  (cos=0.975, final=1.128, year=2007, genre=electronic)
+ 4. The Faceless — Legion of the Serpent [b028e672-c1c2-4dd2-b2ca-4710f2326b32]  (cos=0.967, final=1.127, year=2008, genre=electronic)
+ 5. phoenixdk — No Smoking Area (MAP23: Bye Bye American Pie) [cb4bc7ec-bdbd-418e-b633-3edc3351ae79]  (cos=0.967, final=1.127, year=2008, genre=electronic)
+ 6. モーニング娘。 — 恋のダンスサイト [c81dc45d-11aa-478d-9b00-0454aaf0efe2]  (cos=0.970, final=1.124, year=2007, genre=electronic)
+ 7. Confusion Is Next — Graffiti [7e193e25-7d71-4ce4-b20f-117549cb5b19]  (cos=0.970, final=1.124, year=2009, genre=electronic)
+ 8. After Forever — Discord [1be2a709-9249-4685-998f-e5a58333823e]  (cos=0.968, final=1.123, year=2007, genre=electronic)
+ 9. Indukti — ... And Who's the God Now?! [b34867a9-a764-450a-b5e7-59377771e79a]  (cos=0.966, final=1.121, year=2009, genre=electronic)
+10. Lacrimosa — Copycat (extended version) [a2b5a619-fcb4-433b-845e-f8b3b6058bd1]  (cos=0.973, final=1.121, year=2010, genre=electronic)
+```
+
+List data about an artist:
+```sql
+select track.musicbrainz_recordingid, title, artist.name as artist, album.name as album, album.date, genre_rosamerica, genre_dortmund, file_path from recommend_api_track as track
+join recommend_api_trackartist as trackartist on trackartist.track_id = track.musicbrainz_recordingid
+join recommend_api_artist as artist on trackartist.artist_id = artist.musicbrainz_artistid
+join recommend_api_album as album on track.album_id = album.musicbrainz_albumid
+where lower(artist.name) like '%metallica%';
+```
