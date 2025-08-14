@@ -182,3 +182,4 @@ mbid_to_feature_index.npy
 backend/scripts/acoustic-brainz/output.txt
 backend/scripts/acoustic-brainz/highlevel/
 backend/scripts/acoustic-brainz/sample/
+backend/scripts/acoustic-brainz/cache/
