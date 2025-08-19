@@ -1,6 +1,9 @@
 import re, os, json
 from datetime import datetime
 
+invalid_date_count = 0
+missing_data_count = 0
+
 def parse_flexible_date(date_str):
     """
     Given a date as a string, try to extract its information as a datetime object
@@ -90,6 +93,7 @@ def extract_album_info(tags):
     """
     Returns a list of tuples (album_id, album_name, release_date)
     """
+    global invalid_date_count
     # Date parsing, look through multiple fields to increase chances of finding a valid date
     date = tags.get('date', [None])[0]
     originaldate = tags.get('originaldate', [None])[0]
@@ -99,9 +103,7 @@ def extract_album_info(tags):
         release_date = parse_flexible_date(date)
 
     if not release_date:
-        if 'invalid_date_count' in globals():
-            global invalid_date_count
-            invalid_date_count += 1
+        invalid_date_count += 1
         raise ValueError(f"Missing or invalid date on track: {tags.get('artist', [None])[0]} - {tags.get('title', [None])[0]}, values: {date}, {originaldate}")
     
     return (tags['musicbrainz_albumid'][0], tags['album'][0], release_date)
@@ -114,6 +116,8 @@ def extract_data_from_json(filepath):
     artist_pairs - a list of tuples (artist_id, artist_name), the artists for the track
     album_info - a list of tuples (album_id, album_name, release_date), the album the track is on
     """
+    global missing_data_count
+    
     with open(filepath, 'r') as f:
         try:
             data = json.load(f)
@@ -157,9 +161,7 @@ def extract_data_from_json(filepath):
     
         except (KeyError, IndexError, TypeError, ValueError) as ex:
             print(f'Missing data in file ({ex}): {os.path.normpath(filepath)}')
-            if 'missing_data_count' in globals():
-                global missing_data_count
-                missing_data_count += 1
+            missing_data_count += 1
             return None
         
 

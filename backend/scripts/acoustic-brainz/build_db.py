@@ -11,10 +11,10 @@ import django
 import time
 import numpy as np
 import pandas as pd
+import track_processing_helpers
 from collections import Counter
 from sklearn.preprocessing import StandardScaler
 from concurrent.futures import ThreadPoolExecutor
-from track_processing_helpers import process_file
 
 # Ensure print output is UTF-8 formatted so it can be logged to a file
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
@@ -28,9 +28,6 @@ from recommend_api.models import Track, Artist, TrackArtist, Album, AlbumArtist
 
 # globals used to track how many records are skipped while processing
 duplicate_count = 0
-invalid_date_count = 0
-missing_data_count = 0
-
 
 # Phase 1 - Load JSON data about tracks into memory
 
@@ -76,7 +73,7 @@ with ThreadPoolExecutor(max_workers=8) as executor:
     # TODO: To safely process the full 30M dataset on 16GB RAM, break JSON loading and inserts into smaller chunks
     # e.g. process 5–10 million files at a time to avoid memory exhaustion.
 
-    futures = [executor.submit(process_file, path) for path in json_paths]
+    futures = [executor.submit(track_processing_helpers.process_file, path) for path in json_paths]
     for future in futures:
         result = future.result()
         if not result:
@@ -173,8 +170,8 @@ end = time.time()
 
 print(f"Finished loading records into memory in {end - start:.2f}s, now running the ORM inserts.")
 print(f"Found {duplicate_count} duplicate submissions.")
-print(f"Found {invalid_date_count} submissions with invalid dates.")
-print(f"Found {missing_data_count} submissions with missing data.")
+print(f"Found {track_processing_helpers.invalid_date_count} submissions with invalid dates.")
+print(f"Found {track_processing_helpers.missing_data_count} submissions with missing data.")
 
 start = time.time()
 Album.objects.bulk_create(album_index.values())
