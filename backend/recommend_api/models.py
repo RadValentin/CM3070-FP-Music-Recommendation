@@ -33,6 +33,7 @@ class Track(models.Model):
     genre_dortmund = models.CharField(max_length=255)
     genre_rosamerica = models.CharField(max_length=255)
     file_path = models.CharField(max_length=1024)
+    # TODO: Add a popularity field proportional to the number of duplicates
     
     # danceability = models.FloatField()
     # aggressiveness = models.FloatField()

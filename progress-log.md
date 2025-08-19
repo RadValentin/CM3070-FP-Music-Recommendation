@@ -43,7 +43,9 @@
 ### 13 August
 - Update the DB build script so that for tracks that have duplicates we select the most common values for genre and high-level features instead defaulting to the 1st submission and discarding the rest.
 ### 19 August
-- Begin refining recommendation logic
+- Refine recommendation logic: pre-filter candidate tracks to be same genre and decade as target track, avoid duplicated tracks
+### 20 August
+- Begin API development
 
 ### TODO
 - Cover the module materials

@@ -136,23 +136,50 @@ First attempt to increase recommendation accuracy is to expand the dataset. This
 
 ```
 Cosine similarity search took 0.04 seconds
-Tracks similar to: Metallica - Enter Sandman (1991) [electronic] [roc]:
+Tracks similar to: Metallica - Enter Sandman (1991) [electronic] [roc] [62c2e20a-559e-422f-a44c-9afa7882f0c4]:
 
 Recommendations:
-Artist               | Title                          | Year   | Dortmund   | Rosamerica | Sim
--------------------------------------------------------------------------------------------------
-Death From Above 197 | Little Girl                    | 2004   | electronic | roc        |  1.000 |
-Ornette Coleman      | Angel Voice                    | 1958   | electronic | hip        |  1.000 |
-Cecilia Barraza      | El Sueño de Pochi              | 2002   | electronic | jaz        |  1.000 |
-Jonathan Edwards     | Sunshine (Go Away Today)       | 2007   | electronic | hip        |  1.000 |
-Funker Vogt          | Spread Your Legs!              | 1998   | electronic | dan        |  1.000 |
-Big Rude Jake        | Queer for Cat                  | 1999   | electronic | pop        |  1.000 |
-Rewiring Genesis     | Back in N.Y.C.                 | 2008   | electronic | roc        |  1.000 |
-Buddy Rich           | Funk City-Ola                  | 2007   | electronic | roc        |  1.000 |
-Dave Dobbyn          | P.C.                           | 1994   | electronic | rhy        |  1.000 |
-Herbert Grönemeyer   | Männer                         | 1997   | electronic | hip        |  1.000 |
+Artist               | Title                          | Year   | Dortmund   | Rosamerica | Sim     | MBID
+---------------------------------------------------------------------------------------------------------------
+dZihan & Kamien      | Touch the Sun                  | 2005   | electronic | hip        | 0.99999 | 78af6b52-8135-47b0-9bc2-a13f8c8cbc18
+The Weakerthans      | The Prescience of Dawn         | 2003   | electronic | pop        | 0.99998 | 3f000987-70a0-4289-823c-cbd250438e33
+Compay Segundo       | Viejos sones de Santiago       | 1999   | electronic | hip        | 0.99998 | 97773ff9-de13-402b-aeda-6ce15aab846d
+Brody Dalle          | Meet the Foetus / Oh the Joy   | 2014   | electronic | pop        | 0.99997 | 45a8f8c4-1cb8-48ff-bb31-f9311ac08632
+スパークリング☆ポイント         | 春風                             | 2005   | electronic | hip        | 0.99996 | 8f793b53-c27d-4d07-8816-0d420e8d1700
+Deadsy               | Cruella                        | 2002   | electronic | hip        | 0.99996 | 602a684d-043e-44ae-afc0-e7daf889d128
+Atlantic Starr       | Secret Lovers                  | 2002   | electronic | hip        | 0.99996 | ecb994df-bc2e-4923-94d7-dfe09c2d5cea
+Corona               | Try Me Out                     | 1995   | electronic | dan        | 0.99996 | e4ffbd2a-86ad-48da-a34c-7f8828952bec
+Midnight Oil         | Bullroarer                     | 1987   | electronic | hip        | 0.99996 | 51c88781-a6a9-4d12-899a-e7d3c455ca4f
+Murmansk             | Paper Dust                     | 2009   | electronic | roc        | 0.99995 | 9b1734c6-02c6-48fb-a11b-dbd5ee8013e7
 
 Stats for similarities:
-mean: 0.10890465974807739 std: 0.5467357039451599 p95: 0.9561436772346497 max: 0.9999586939811707
+mean: 0.10738343745470047 std: 0.564008355140686 p95: 0.9618921279907227 max: 0.9999926686286926
 Script execution took 0.14 seconds
 ```
+
+Increasing the number of datapoints did not significantly improve recommendation accuracy. The next attempt is to restrict the recommendations to be of the same genre and released in the same decade. We will use the categories set by the Rosamerica algorithm for genre because it consistently ranks Metallica as rock and not electronic. This is the script output:
+
+```
+Cosine similarity search took 0.00 seconds
+Tracks similar to: Metallica - Enter Sandman (1991) [electronic] [roc] [62c2e20a-559e-422f-a44c-9afa7882f0c4]:
+
+Recommendations:
+Artist               | Title                          | Year   | Dortmund   | Rosamerica | Sim     | MBID
+---------------------------------------------------------------------------------------------------------------
+Ornette Coleman      | City Living                    | 1996   | electronic | roc        | 0.99993 | 70d7cac8-2e50-40bc-bd53-682d66ced3c8
+Kristin Hersh        | Like You                       | 1998   | electronic | roc        | 0.99981 | 1a4004e6-2cc1-4c27-88a4-7e351a45fb2a
+Rage                 | From the Cradle to the Grave   | 1998   | electronic | roc        | 0.99977 | e130ae06-e5e4-4668-ba44-cefda15a49b3
+Anthrax              | Burst                          | 1993   | electronic | roc        | 0.99974 | 49863b15-0d64-4bc6-85e4-f386cb0b91a6
+Garageland           | Cut It Out                     | 1997   | electronic | roc        | 0.99971 | c1dd982a-a8ea-4f80-9fb7-987673bb78e5
+The Smashing Pumpkin | Today                          | 1993   | electronic | roc        | 0.99965 | 622baf54-342a-40a6-801e-43f159fc4f38
+HammerFall           | Dreamland                      | 1998   | electronic | roc        | 0.99959 | 8ef679e3-6e66-4893-a27c-5f530067dafb
+Mad Season           | I Don't Know Anything          | 1995   | electronic | roc        | 0.99953 | b8647283-0644-4eb2-a1d9-2bcddc5e7e3f
+Evanescence          | Imaginary                      | 1998   | electronic | roc        | 0.99949 | 5399493d-4599-4d1e-9fb8-74257a6efbd3
+Ayreon               | Act I "The Dawning": Eyes of T | 1995   | electronic | roc        | 0.99949 | a2d97860-e047-4356-a43f-5948b9a221c5
+
+Stats for similarities:
+mean: 0.09563542157411575 std: 0.566411018371582 p95: 0.972338080406189 max: 0.9999292492866516
+Script execution took 0.02 seconds
+```
+
+Now most tracks (Rage, Anthrax, HammerFall, Mad Season, The Smashing Pumpkins, Ayreon) are aligning well with 1990s heavy metal, thrash, grunge, or alternative rock.

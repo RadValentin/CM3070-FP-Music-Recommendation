@@ -1,8 +1,15 @@
-import re, os, json
+import re, os, json, sys
 from datetime import datetime
 
+mute_logs = False
 invalid_date_count = 0
 missing_data_count = 0
+
+def log(message):
+    global mute_logs
+    
+    if not mute_logs:
+        print(message)
 
 def parse_flexible_date(date_str):
     """
@@ -122,7 +129,7 @@ def extract_data_from_json(filepath):
         try:
             data = json.load(f)
         except json.JSONDecodeError:
-            print("Bad JSON:", filepath)
+            log(f"Bad JSON: {filepath}")
             return None
 
         highlevel = data.get('highlevel') or {}
@@ -160,7 +167,7 @@ def extract_data_from_json(filepath):
             return track
     
         except (KeyError, IndexError, TypeError, ValueError) as ex:
-            print(f'Missing data in file ({ex}): {os.path.normpath(filepath)}')
+            log(f'Missing data in file ({ex}): {os.path.normpath(filepath)}')
             missing_data_count += 1
             return None
         
@@ -172,5 +179,5 @@ def process_file(json_path):
     try:
         return extract_data_from_json(json_path)
     except Exception as ex:
-        print(f'Could not process file ({ex}): {os.path.normpath(json_path)}')
+        log(f'Could not process file ({ex}): {os.path.normpath(json_path)}')
         return None
