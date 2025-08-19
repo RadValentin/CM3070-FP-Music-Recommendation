@@ -181,5 +181,7 @@ mbid_to_feature_index.npy
 # DB dumps from AcousticBrainz used to generate the DB, no need to pollute the repo.
 backend/scripts/acoustic-brainz/output.txt
 backend/scripts/acoustic-brainz/highlevel/
+backend/scripts/acoustic-brainz/highlevel-partial/
+backend/scripts/acoustic-brainz/highlevel-full/
 backend/scripts/acoustic-brainz/sample/
 backend/scripts/acoustic-brainz/cache/

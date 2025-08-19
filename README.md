@@ -60,7 +60,15 @@ python scripts/populate_db.py
 - `backend`
   - `music_recommendation` - the main Django project
   - `recommend_api` - the Django app that provides the music recommendation API and serves the HTML/JS/CSS assets
+  - `scripts`
+    - `acoustic-brainz`
+      - `sample` - 100k tracks dataset *(not included in repo)*
+      - `highlevel-partial` - 1M tracks dataset *(not included in repo)*
+      - `highlevel-full` - 30M tracks dataset *(not included in repo)*
 - `frontend` - assets that are bundled into static assets and served by the `recommend_api` app
+
+> [!NOTE]
+> The AcousticBrainz datasets are not included in the repo due to their size. If you want to replicate the app from scratch, you can download them from here: https://acousticbrainz.org/download and unzip them in the appropiate folders (see above). I recommend using the *sample* dataset as it provides enough data for development without taking up too much space.
 
 ## Prototype App
 

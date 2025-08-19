@@ -1,7 +1,7 @@
 # Data Processing for Music Recommendation System
 # 
 # > The code assumes you have downloaded and unzipped the AcousticBrainz DB dumps in the same 
-# directory, under `/highlevel/` or `/sample/`. 
+# directory, under `highlevel-full/`, `highlevel-partial/` or `sample/`. 
 # They can be downloaded from here: https://acousticbrainz.org/download
 
 import io
@@ -34,16 +34,17 @@ missing_data_count = 0
 
 # Phase 1 - Load JSON data about tracks into memory
 
+# Different directories where AcousticBrainz data is stored
+#dataset_path = 'highlevel-full/' # 30M records
+#dataset_path = 'highlevel-partial/' # 1M records
+dataset_path = 'sample/' # 100k records
+
 # Clean old records
 AlbumArtist.objects.all().delete()
 Album.objects.all().delete()
 TrackArtist.objects.all().delete()
 Track.objects.all().delete()
 Artist.objects.all().delete()
-
-# Different directories where AcousticBrainz data is stored
-#dataset_path = 'highlevel/' # 1M records
-dataset_path = 'sample/' # 100k records
 
 # paths to JSON files, each containting metadata and high-level features for one track
 json_paths = [] 
