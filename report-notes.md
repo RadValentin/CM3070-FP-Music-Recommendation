@@ -182,4 +182,4 @@ mean: 0.09563542157411575 std: 0.566411018371582 p95: 0.972338080406189 max: 0.9
 Script execution took 0.02 seconds
 ```
 
-Now most tracks (Rage, Anthrax, HammerFall, Mad Season, The Smashing Pumpkins, Ayreon) are aligning well with 1990s heavy metal, thrash, grunge, or alternative rock.
+Now most tracks (Rage, Anthrax, HammerFall, Mad Season, The Smashing Pumpkins, Ayreon) are aligning well with 1990s heavy metal, thrash, grunge, or alternative rock. However the recommendation with the highest similarity is an outlier (0.99993, Ornette Coleman - City Living ) and is jazz music incorrectly categorized as rock. This shows the limitations of the Acoustic Brainz dataset, we can't get accurate predictions if the data itself is flawed.
