@@ -1,4 +1,4 @@
-import re, os, json, sys
+import re, os, orjson, json
 from datetime import datetime
 
 mute_logs = False
@@ -125,9 +125,9 @@ def extract_data_from_json(filepath):
     """
     global missing_data_count
     
-    with open(filepath, 'r') as f:
+    with open(filepath, 'rb') as f:
         try:
-            data = json.load(f)
+            data = orjson.loads(f.read())
         except json.JSONDecodeError:
             log(f"Bad JSON: {filepath}")
             return None

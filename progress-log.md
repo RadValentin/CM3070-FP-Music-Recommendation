@@ -45,6 +45,7 @@
 ### 19 August
 - Refine recommendation logic: pre-filter candidate tracks to be same genre and decade as target track, avoid duplicated tracks
 ### 20 August
+- Decrease DB build time by 64 seconds (17% improvement) by using `orjson` package instead of native json to parse the dataset record files
 - Begin API development
 
 ### TODO
