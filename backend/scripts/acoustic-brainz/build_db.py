@@ -38,6 +38,7 @@ dataset_path = 'highlevel-partial/' # 1M records
 #dataset_path = 'sample/' # 100k records
 
 # Clean old records
+print("Cleaning up old records", flush=True)
 AlbumArtist.objects.all().delete()
 Album.objects.all().delete()
 TrackArtist.objects.all().delete()
@@ -47,7 +48,7 @@ Artist.objects.all().delete()
 # paths to JSON files, each containting metadata and high-level features for one track
 json_paths = [] 
 
-print("Building a list of JSON files", end="", flush=True)
+print("Building a list of JSON files", flush=True)
 
 # walks through a branch of the directory tree, it will look at all subfolders and files recursively
 for root, dirs, files in os.walk(dataset_path):
@@ -61,7 +62,7 @@ for root, dirs, files in os.walk(dataset_path):
 start = time.time()
 
 #json_paths = json_paths[0:1000] # use only a subset of the data, for debugging
-print(f"Will load {len(json_paths)} records", end="", flush=True)
+print(f"Will load {len(json_paths):,} records", end="", flush=True)
 
 album_index = {} # keep track of unique album names, indexed by MBID
 artist_index = {} # keep track of unique artist names, indexed by MBID
@@ -71,7 +72,7 @@ albumartist_set = set() # set of all Album-Artist M2M pairings
 track_features_list = [] # list of feature values for each track
 
 processing_counter = 0
-with ThreadPoolExecutor(max_workers=8) as executor:
+with ThreadPoolExecutor() as executor:
     # TODO: To safely process the full 30M dataset on 16GB RAM, break JSON loading and inserts into smaller chunks
     # e.g. process 5–10 million files at a time to avoid memory exhaustion.
     futures = [executor.submit(tph.process_file, path) for path in json_paths]
@@ -98,9 +99,12 @@ with ThreadPoolExecutor(max_workers=8) as executor:
         processing_counter += 1
         if processing_counter % 1000 == 0:
             print(".", end="", flush=True)
-
+    print("")
 
 ## Phase 2 - Merge duplicate entries for tracks by selecting the most common value for each field
+
+print("Will merge duplicate tracks.")
+
 merged_tracks = {}
 
 # Numeric fields for which we'll select the median value between duplicates
@@ -139,8 +143,10 @@ track_index = merged_tracks
 
 
 ## Phase 3 - Build the DB models
-track_list = []
 
+print("Will build DB models.")
+
+track_list = []
 FEATURE_FIELDS = [
     "danceability", "aggressiveness", "happiness", "sadness",
     "relaxedness", "partyness", "acousticness", "electronicness",
@@ -190,9 +196,9 @@ for track_id, track in track_index.items():
 end = time.time()
 
 print(f"Finished loading records into memory in {end - start:.2f}s, now running the ORM inserts.")
-print(f"Found {duplicate_count} duplicate submissions.")
-print(f"Found {tph.invalid_date_count} submissions with invalid dates.")
-print(f"Found {tph.missing_data_count} submissions with missing data.")
+print(f"Found {duplicate_count:,} duplicate submissions.")
+print(f"Found {tph.invalid_date_count:,} submissions with invalid dates.")
+print(f"Found {tph.missing_data_count:,} submissions with missing data.")
 
 start = time.time()
 Album.objects.bulk_create(album_index.values())
@@ -202,15 +208,17 @@ print(f"Inserted artists and albums in {end - start:.2f} seconds")
 
 start = time.time()
 batch_size = 2000
+print("Will insert records in DB", end="", flush=True)
 
 for i in range(0, len(track_list), batch_size):
-    print(f'{i}/{len(track_list)} processed')
+    #print(f'{i}/{len(track_list)} processed')
     start_batch = time.time()
     Track.objects.bulk_create(track_list[i:i+batch_size])
-    print(f'Batch took {time.time() - start_batch:.2f} seconds')
+    #print(f'Batch took {time.time() - start_batch:.2f} seconds')
+    print(".", end="", flush=True)
 
 end = time.time()
-print(f"Inserted {len(track_list)} records in {end - start:.2f} seconds")
+print(f"\nInserted {len(track_list)} records in {end - start:.2f} seconds")
 
 start = time.time()
 # M2M pairing were stored as sets to avoid dulication, convert them to lists and create objects.
@@ -231,7 +239,9 @@ print(f"Inserted M2M pairings for TrackArtist and AlbumArtist in {end - start:.2
 start = time.time()
 # Load the track audio features into a DataFrame and then export, keeping track 
 # of how MBIS map to indexes in the feature matrix.
-df = pd.DataFrame(track_features_list, columns=["mbid", "genre_dortmund", "genre_rosamerica", "year", *FEATURE_FIELDS])
+df = pd.DataFrame(track_features_list, columns=[
+    "mbid", "genre_dortmund", "genre_rosamerica", "year", *FEATURE_FIELDS
+])
 df[FEATURE_FIELDS] = df[FEATURE_FIELDS].astype(np.float32)
 
 # separate indexes from features

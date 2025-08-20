@@ -98,7 +98,7 @@ similarities[target_index] = -np.inf
 # those indexes are sorted in ascending order.
 top_indexes = similarities.argsort()[::-1][:50]
 end = time.time()
-print(f"Cosine similarity search took {end - start:.2f} seconds")
+print(f"Cosine similarity search took {end - start:.5f} seconds")
 
 # extract the MBIDs for the top tracks and get data for them from the DB
 top_mbids = mbid_to_idx[top_indexes].tolist()
@@ -152,6 +152,6 @@ print("mean:", float(others.mean()),
       "max:", float(others.max()))
 
 end = time.time()
-print(f"Script execution took {end - start:.2f} seconds")
+print(f"Script execution took {end - start:.5f} seconds")
 
 
