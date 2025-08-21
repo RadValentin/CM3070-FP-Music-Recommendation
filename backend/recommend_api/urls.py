@@ -4,6 +4,6 @@ from . import api
 
 urlpatterns = [
     path('', index, name='index'),
-    path('api/song/<int:id>/', api.song_detail, name='song_detail_api'),
-    path('api/similar/', api.similar_songs, name='similar_songs_api')
+    path('api/track/<str:musicbrainz_recordingid>/', api.track_detail, name='track_detail_api'),
+    path('api/similar/', api.similar_tracks, name='similar_tracks_api')
 ]

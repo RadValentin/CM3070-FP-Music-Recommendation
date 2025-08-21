@@ -3,7 +3,7 @@ from django.shortcuts import render
 from .models import *
 
 def index(request):
-    songs = Song.objects.all().order_by('?')[:20]
+    tracks = Track.objects.prefetch_related('artists').all().order_by('?')[:20]
     return render(request, 'index.html', {
-        'songs': songs
+        'tracks': tracks
     })

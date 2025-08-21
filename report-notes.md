@@ -104,7 +104,18 @@ For 1M records high-level dataset:
 
 ### Building the database
 
-### Recommendation logic
+## Recommendation logic
+
+For making the recommendations we'll use the following approach:
+- Extract metadata from the dataset to a database: track title, artist, album, genre, release year
+- Extract audio features to a feature matrix that will be loaded in memory
+- Run cosine simialrity between a target track and the feature matrix
+- Return a list of tracks with the highest simiarities
+
+We can't run cosine similarity against the DB data directly because it involves comparing the current track against every other track. For 7M tracks that would involve getting all 7M rows from the DB for every request. Instead, we keep the data needed for comparisons in memory which reduces load on the DB. We'll only get the metadata from the DB.
+
+Filtering is another complication. Ideally we should be able to pre-filter the list of candidate tracks to a smaller subset before running cosine similarity. Now the question becomes if we should store all data in memory but this dramatically increases RAM load. A hybrid approach is a good compromise here: keep the metadata in the DB for prefiltering and the audio features in memory.
+
 
 The recommendation script output for sample dataset (100k tracks):
 ```
@@ -183,3 +194,4 @@ Script execution took 0.02 seconds
 ```
 
 Now most tracks (Rage, Anthrax, HammerFall, Mad Season, The Smashing Pumpkins, Ayreon) are aligning well with 1990s heavy metal, thrash, grunge, or alternative rock. However the recommendation with the highest similarity is an outlier (0.99993, Ornette Coleman - City Living ) and is jazz music incorrectly categorized as rock. This shows the limitations of the Acoustic Brainz dataset, we can't get accurate predictions if the data itself is flawed.
+

@@ -27,26 +27,33 @@
     
     <div class="columns">
       <div>
-        <h2>Random songs</h2>
+        <h2>Random tracks</h2>
         <table>
           <thead>
             <tr>
-              <th>ID</th>
+              <th>MusicBrainz ID</th>
               <th>Artist - Track Title</th>
             </tr>
           </thead>
-          {% for song in songs %}
+          {% for track in tracks %}
             <tr>
-              <td>{{song.id}}</td>
-              <td><a href="/api/song/{{song.id}}"> {{song.artist}} - {{song.title}}</a></td>
+              <td>{{track.musicbrainz_recordingid}}</td>
+              <td>
+                <a href="/api/track/{{track.musicbrainz_recordingid}}">
+                  {{track.title}} -
+                  {% for artist in track.artists.all %}
+                    {{ artist.name }}{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
+                </a>
+              </td>
             </tr>
           {% endfor %}
         </table>
       </div>
       <div>
-        <h2>Recommendation based on ID</h2>
+        <h2>Recommendation based on MBID</h2>
         <form action="/api/similar/" method="POST">
-          <input name="id" type="text" />
+          <input name="musicbrainz_recordingid" type="text" />
           <input type="submit" />
         </form>
       </div>
