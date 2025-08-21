@@ -255,8 +255,9 @@ feature_matrix_scaled = scaler.transform(feature_matrix).astype(np.float32)
 # L2 normalize each row for cosine similarity later on
 feature_matrix_scaled /= (np.linalg.norm(feature_matrix_scaled, axis=1, keepdims=True) + 1e-8)
 
+filename = os.path.join(os.path.dirname(__file__), "../..", "features_and_index.npz")
 np.savez_compressed(
-    "features_and_index.npz",
+    filename,
     # save vectors with values for audio features of tracks
     feature_matrix=feature_matrix_scaled,
     # save mapping from MusicBrainz ID to indexes in feature matrix
