@@ -33,6 +33,7 @@
             <tr>
               <th>MusicBrainz ID</th>
               <th>Artist - Track Title</th>
+              <th>Sim</th>
             </tr>
           </thead>
           {% for track in tracks %}
@@ -45,6 +46,12 @@
                     {{ artist.name }}{% if not forloop.last %}, {% endif %}
                   {% endfor %}
                 </a>
+              </td>
+              <td>
+                <form action="/api/similar/" method="POST">
+                  <input name="musicbrainz_recordingid" type="text" value="{{track.musicbrainz_recordingid}}" hidden />
+                  <input type="submit" value="🔍"/>
+                </form>
               </td>
             </tr>
           {% endfor %}

@@ -47,7 +47,11 @@
 ### 20 August
 - Decrease DB build time by 64 seconds (17% improvement) by using `orjson` package instead of native json to parse the dataset record files
 ### 21 August
-- Begin API development, add endpoint for track details `views.track_detail(request, musicbrainz_recordingid)`
+- Begin API development, add endpoint for track details `api/track/<str:musicbrainz_recordingid>/`
+- Extract recommendation logic to a separate module
+## 22 August
+- Add tests for recommendation logic
+- Add endpoint for making recommendations `api/similar/`
 
 ### TODO
 - Cover the module materials
