@@ -52,6 +52,8 @@
 ## 22 August
 - Add tests for recommendation logic
 - Add endpoint for making recommendations `api/similar/`
+# 23 August
+- Add tests for recommendation endpoint
 
 ### TODO
 - Cover the module materials
