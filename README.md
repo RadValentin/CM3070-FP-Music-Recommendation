@@ -1,4 +1,5 @@
-# CM3070-FP-Music-Recommendation
+# TasteMender: A stateless music recommendation API
+> Created as a final project for UoL BScCS (CM3070) by Valentin Radulescu
 
 ## Installation
 
