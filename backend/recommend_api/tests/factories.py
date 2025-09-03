@@ -1,9 +1,10 @@
 import factory
+from factory.django import DjangoModelFactory
 from random import randint, choice
 from ..models import Artist, Album, Track
 
 
-class ArtistFactory(factory.Factory):
+class ArtistFactory(DjangoModelFactory):
     class Meta:
         model = Artist
     
@@ -11,7 +12,7 @@ class ArtistFactory(factory.Factory):
     name = factory.Faker('name')
 
 
-class AlbumFactory(factory.Factory):
+class AlbumFactory(DjangoModelFactory):
     class Meta:
         model = Album
     
@@ -21,7 +22,7 @@ class AlbumFactory(factory.Factory):
     date = factory.Faker('date')
 
 
-class TrackFactory(factory.Factory):
+class TrackFactory(DjangoModelFactory):
     class Meta:
         model = Track
     

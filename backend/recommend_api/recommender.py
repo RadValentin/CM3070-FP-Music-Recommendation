@@ -15,7 +15,7 @@ try:
     genre_dortmund = data['genre_dortmund'] # genre classification
     genre_rosamerica = data['genre_rosamerica'] # genre classification
 except FileNotFoundError as ex:
-    raise FileNotFoundError(f"Feature file not found at {filename}") from ex
+    print(f"Feature file not found at {filename}")
 
 
 def recommend(target_mbid, k=50, use_ros=True):

@@ -104,6 +104,34 @@ For 1M records high-level dataset:
 
 ### Building the database
 
+## Merging the JSON files
+
+Merging multiple JSON files into one NDJSON. This is done to reduce the number of individual file reads needed to build the database. In theory it should be much faster to read JSON data sequentially from a single location than when split across millions of tiny files.
+```bash
+# Linux (or WSL)
+/usr/bin/time -v bash -lc '
+find acousticbrainz-highlevel-json-20220623-0/acousticbrainz-highlevel-json-20220623 -type f -name "*.json" -print0 \
+| xargs -0 -n 20000 -P 12 jq -c . > highlevel-merged-0.ndjson
+'
+```
+In WSL 
+- for 100k records merge took 3min 54s (234s)
+- for 1M records merge took 39min 07s (2347s)
+
+In both cases this is much slower than processing each individual file in a Python script. One bottleneck is that the files are stored on an NTFS partition and not on a native Linux partition. The overhead of converting file access between the two formats adds extra milliseconds to each read.
+
+```powershell
+# Windows (Powershell 7+)
+Measure-Command {
+  Get-ChildItem -Path ".\acousticbrainz-highlevel-sample-json-20220623-0\acousticbrainz-highlevel-sample-json-20220623" `
+    -Recurse -Filter *.json -File |
+    ForEach-Object -Parallel{
+      & jq -c . -- $_.FullName
+    } | Out-File -FilePath merged.ndjson -Encoding utf8
+}
+```
+Merge of 100k records takes 14min 36s (876s). This is even slower than through WSL. 
+
 ## Recommendation logic
 
 For making the recommendations we'll use the following approach:

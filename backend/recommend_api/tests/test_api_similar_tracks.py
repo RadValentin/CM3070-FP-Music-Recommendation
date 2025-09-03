@@ -10,13 +10,11 @@ from recommend_api.serializers import SimilarAlbumSerializer, SimilarTrackSerial
 
 class SimilarTracksAPITests(APITestCase):
     def setUp(self):
-        target_artist = ArtistFactory.create(musicbrainz_artistid="AR1")
-        target_artist.save()  # Ensure saved
+        target_artist = ArtistFactory(musicbrainz_artistid="AR1")
         
         tracks = []
         for mbid, title in [("A", "Song A"), ("B", "Song B"), ("C", "Song C")]:
-            new_track = TrackFactory.create(musicbrainz_recordingid=mbid, title=title)
-            new_track.save()  # Ensure saved
+            new_track = TrackFactory(musicbrainz_recordingid=mbid, title=title)
             new_track.artists.add(target_artist)
             tracks.append(new_track)
 

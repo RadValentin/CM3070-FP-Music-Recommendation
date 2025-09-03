@@ -54,6 +54,8 @@
 - Add endpoint for making recommendations `api/similar/`
 ### 23 August
 - Add tests for recommendation endpoint
+### 03 September
+- Add script for compiling many JSON files into one NDJSON to speed up data ingest process by reducing file open/close overhead. Dataset load time time went from 33s to 29s for 100k records.
 
 ## Final Stretch Plan
 

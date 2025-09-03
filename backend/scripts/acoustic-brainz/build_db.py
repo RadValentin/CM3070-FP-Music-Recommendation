@@ -1,7 +1,7 @@
 # Data Processing for Music Recommendation System
-# 
-# > The code assumes you have downloaded and unzipped the AcousticBrainz DB dumps in the same 
-# directory, under `highlevel-full/`, `highlevel-partial/` or `sample/`. 
+#
+# > The code assumes you have downloaded and unzipped the AcousticBrainz DB dumps in the same
+# directory, under `highlevel-full/`, `highlevel-partial/` or `sample/`.
 # They can be downloaded from here: https://acousticbrainz.org/download
 
 import io
@@ -17,7 +17,7 @@ from sklearn.preprocessing import StandardScaler
 from concurrent.futures import ThreadPoolExecutor
 
 # Ensure print output is UTF-8 formatted so it can be logged to a file
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 # Django setup so we can access ORM models
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(os.getcwd()))))
@@ -33,9 +33,9 @@ tph.mute_logs = True
 # Phase 1 - Load JSON data about tracks into memory
 
 # Different directories where AcousticBrainz data is stored
-#dataset_path = 'highlevel-full/' # 30M records
-dataset_path = 'highlevel-partial/' # 1M records
-#dataset_path = 'sample/' # 100k records
+# dataset_path = 'highlevel-full/' # 30M records
+# dataset_path = 'highlevel-partial/' # 1M records
+dataset_path = "D:/Datasets/AcousticBrainz/Sample/acousticbrainz-highlevel-sample-json-20220623-0"  # 100k records
 
 # Clean old records
 print("Cleaning up old records", flush=True)
@@ -45,37 +45,48 @@ TrackArtist.objects.all().delete()
 Track.objects.all().delete()
 Artist.objects.all().delete()
 
-# paths to JSON files, each containting metadata and high-level features for one track
-json_paths = [] 
+merged_json_paths = [
+    "D:/Datasets/AcousticBrainz/Sample/merged-highlevel-0.ndjson"
+]
 
-print("Building a list of JSON files", flush=True)
-
-# walks through a branch of the directory tree, it will look at all subfolders and files recursively
-for root, dirs, files in os.walk(dataset_path):
-    for name in files:
-        if name.lower().endswith(".json"):
-            json_paths.append(os.path.join(root, name))
-        else:
-            print(f"Non-JSON file skipped: {name}")
-
+album_index = {}  # keep track of unique album names, indexed by MBID
+artist_index = {}  # keep track of unique artist names, indexed by MBID
+track_index = {}  # keep track of unique track data, indexed by MBID
+trackartist_set = set()  # set of all Track-Artist M2M pairings, to avoid duplication
+albumartist_set = set()  # set of all Album-Artist M2M pairings
+track_features_list = []  # list of feature values for each track
 
 start = time.time()
 
-#json_paths = json_paths[0:1000] # use only a subset of the data, for debugging
-print(f"Will load {len(json_paths):,} records", end="", flush=True)
+if len(merged_json_paths) < 1:
+    # paths to JSON files, each containing metadata and high-level features for one track
+    json_paths = []
 
-album_index = {} # keep track of unique album names, indexed by MBID
-artist_index = {} # keep track of unique artist names, indexed by MBID
-track_index = {} # keep track of unique track data, indexed by MBID
-trackartist_set = set() # set of all Track-Artist M2M pairings, to avoid duplication
-albumartist_set = set() # set of all Album-Artist M2M pairings
-track_features_list = [] # list of feature values for each track
+    print("Building a list of JSON files", flush=True)
+
+    # walks through a branch of the directory tree, it will look at all subfolders and files recursively
+    for root, dirs, files in os.walk(dataset_path):
+        for name in files:
+            if name.lower().endswith(".json"):
+                json_paths.append(os.path.join(root, name))
+            else:
+                print(f"Non-JSON file skipped: {name}")
+
+    # json_paths = json_paths[0:1000] # use only a subset of the data, for debugging
+    print(f"Will load {len(json_paths):,} records", end="", flush=True)
 
 processing_counter = 0
 with ThreadPoolExecutor() as executor:
     # TODO: To safely process the full 30M dataset on 16GB RAM, break JSON loading and inserts into smaller chunks
     # e.g. process 5–10 million files at a time to avoid memory exhaustion.
-    futures = [executor.submit(tph.process_file, path) for path in json_paths]
+    if len(merged_json_paths) < 1:
+        futures = [executor.submit(tph.process_file, path) for path in json_paths]
+    else:
+        with open(merged_json_paths[0], "rb") as f:
+            futures = [
+                executor.submit(tph.extract_data_from_json_str, line) for line in f
+            ]
+
     for future in futures:
         try:
             result = future.result()
@@ -87,14 +98,14 @@ with ThreadPoolExecutor() as executor:
             continue
 
         track_id = result["musicbrainz_recordingid"]
-        # Use a hashmap to check if the track has been already added (from another submission), 
+        # Use a hashmap to check if the track has been already added (from another submission),
         # only load it if that submission failed (missing data)
         if track_id not in track_index or track_index[track_id] is None:
             track_index[track_id] = [result]
         else:
             duplicate_count += 1
             track_index[track_id].append(result)
-        
+
         # print a dot every 1000 files
         processing_counter += 1
         if processing_counter % 1000 == 0:
@@ -109,9 +120,17 @@ merged_tracks = {}
 
 # Numeric fields for which we'll select the median value between duplicates
 NUM_FIELDS = [
-    "danceability", "aggressiveness", "happiness", "sadness",
-    "relaxedness", "partyness", "acousticness", "electronicness",
-    "instrumentalness", "tonality", "brightness",
+    "danceability",
+    "aggressiveness",
+    "happiness",
+    "sadness",
+    "relaxedness",
+    "partyness",
+    "acousticness",
+    "electronicness",
+    "instrumentalness",
+    "tonality",
+    "brightness",
 ]
 # Categorical fields for which we'll select the most common value between duplicates
 CAT_FIELDS = ["genre_dortmund", "genre_rosamerica"]
@@ -119,21 +138,21 @@ CAT_FIELDS = ["genre_dortmund", "genre_rosamerica"]
 for mbid, tracks in track_index.items():
     if not tracks:
         continue
-    
+
     # Use a track as a base for fields that won't be selected
     base_track = tracks[0].copy()
-    
-    merged_track = {}    
+
+    merged_track = {}
     # NUMERIC: aggregate with median (robust)
     for field in NUM_FIELDS:
         values = [t[field] for t in tracks if t.get(field) is not None]
         merged_track[field] = float(np.median(values)) if values else None
-    
+
     # CATEGORICAL (single-label fallback): pick most common non-empty
     for field in CAT_FIELDS:
         vals = [t.get(field) for t in tracks if t.get(field)]
         merged_track[field] = Counter(vals).most_common(1)[0][0] if vals else None
-    
+
     # Use values from the base track + values selected by most common
     merged_track = base_track | merged_track
     merged_tracks[mbid] = merged_track
@@ -148,9 +167,17 @@ print("Will build DB models.")
 
 track_list = []
 FEATURE_FIELDS = [
-    "danceability", "aggressiveness", "happiness", "sadness",
-    "relaxedness", "partyness", "acousticness", "electronicness",
-    "instrumentalness", "tonality", "brightness"
+    "danceability",
+    "aggressiveness",
+    "happiness",
+    "sadness",
+    "relaxedness",
+    "partyness",
+    "acousticness",
+    "electronicness",
+    "instrumentalness",
+    "tonality",
+    "brightness",
 ]
 
 for track_id, track in track_index.items():
@@ -163,39 +190,48 @@ for track_id, track in track_index.items():
         duration=track["duration"],
         genre_dortmund=track["genre_dortmund"],
         genre_rosamerica=track["genre_rosamerica"],
-        file_path=track["file_path"]
+        file_path="W",
     )
     track_list.append(track_obj)
 
     for artist_id, artist_name in artist_pairs:
         # Store artist data in a separate hashmap and associtate it with the track
         if artist_id not in artist_index or artist_index[artist_id] is None:
-            artist_index[artist_id] = Artist(musicbrainz_artistid=artist_id, name=artist_name)
+            artist_index[artist_id] = Artist(
+                musicbrainz_artistid=artist_id, name=artist_name
+            )
         trackartist_set.add((track_id, artist_id))
 
         # Associate track with album, album with artist
         if not album_info:
             continue
         album_id, album_name, date = album_info
-        
+
         if album_id not in album_index or album_index[album_id] is None:
-            album_index[album_id] = Album(musicbrainz_albumid=album_id, name=album_name, date=date)
-        
+            album_index[album_id] = Album(
+                musicbrainz_albumid=album_id, name=album_name, date=date
+            )
+
         track_obj.album = album_index[album_id]
         albumartist_set.add((album_id, artist_id))
-    
-    # Store the track MBID + metadata + audio features, will be exported and used by recommendation 
+
+    # Store the track MBID + metadata + audio features, will be exported and used by recommendation
     # logic.
     track_features = [track.get(field) for field in FEATURE_FIELDS]
-    track_features_list.append([
-        track["musicbrainz_recordingid"],
-        track["genre_dortmund"],
-        track["genre_rosamerica"],
-        track["album_info"][2].year, # release year
-    ] + track_features)    
+    track_features_list.append(
+        [
+            track["musicbrainz_recordingid"],
+            track["genre_dortmund"],
+            track["genre_rosamerica"],
+            track["album_info"][2].year,  # release year
+        ]
+        + track_features
+    )
 end = time.time()
 
-print(f"Finished loading records into memory in {end - start:.2f}s, now running the ORM inserts.")
+print(
+    f"Finished loading records into memory in {end - start:.2f}s, now running the ORM inserts."
+)
 print(f"Found {duplicate_count:,} duplicate submissions.")
 print(f"Found {tph.invalid_date_count:,} submissions with invalid dates.")
 print(f"Found {tph.missing_data_count:,} submissions with missing data.")
@@ -211,10 +247,10 @@ batch_size = 2000
 print("Will insert records in DB", end="", flush=True)
 
 for i in range(0, len(track_list), batch_size):
-    #print(f'{i}/{len(track_list)} processed')
+    # print(f'{i}/{len(track_list)} processed')
     start_batch = time.time()
-    Track.objects.bulk_create(track_list[i:i+batch_size])
-    #print(f'Batch took {time.time() - start_batch:.2f} seconds')
+    Track.objects.bulk_create(track_list[i : i + batch_size])
+    # print(f'Batch took {time.time() - start_batch:.2f} seconds')
     print(".", end="", flush=True)
 
 end = time.time()
@@ -224,28 +260,35 @@ start = time.time()
 # M2M pairing were stored as sets to avoid dulication, convert them to lists and create objects.
 trackartist_list = []
 for track_id, artist_id in trackartist_set:
-    trackartist_list.append(TrackArtist(artist=artist_index[artist_id], track_id=track_id))
+    trackartist_list.append(
+        TrackArtist(artist=artist_index[artist_id], track_id=track_id)
+    )
 TrackArtist.objects.bulk_create(trackartist_list)
 
 albumartist_list = []
 for album_id, artist_id in albumartist_set:
-    albumartist_list.append(AlbumArtist(artist=artist_index[artist_id], album=album_index[album_id]))
+    albumartist_list.append(
+        AlbumArtist(artist=artist_index[artist_id], album=album_index[album_id])
+    )
 AlbumArtist.objects.bulk_create(albumartist_list)
 end = time.time()
-print(f"Inserted M2M pairings for TrackArtist and AlbumArtist in {end - start:.2f} seconds")
+print(
+    f"Inserted M2M pairings for TrackArtist and AlbumArtist in {end - start:.2f} seconds"
+)
 
 # Phase 4 - Save data about audio features into vector files
 
 start = time.time()
-# Load the track audio features into a DataFrame and then export, keeping track 
+# Load the track audio features into a DataFrame and then export, keeping track
 # of how MBIS map to indexes in the feature matrix.
-df = pd.DataFrame(track_features_list, columns=[
-    "mbid", "genre_dortmund", "genre_rosamerica", "year", *FEATURE_FIELDS
-])
+df = pd.DataFrame(
+    track_features_list,
+    columns=["mbid", "genre_dortmund", "genre_rosamerica", "year", *FEATURE_FIELDS],
+)
 df[FEATURE_FIELDS] = df[FEATURE_FIELDS].astype(np.float32)
 
 # separate indexes from features
-#feature_ids = df["mbid"].to_numpy()
+# feature_ids = df["mbid"].to_numpy()
 feature_matrix = df[FEATURE_FIELDS].to_numpy(dtype=np.float32)
 
 # Scale values so they're more spread out, fixes skewed distribution
@@ -253,7 +296,9 @@ scaler = StandardScaler(with_mean=True, with_std=True).fit(feature_matrix)
 feature_matrix_scaled = scaler.transform(feature_matrix).astype(np.float32)
 
 # L2 normalize each row for cosine similarity later on
-feature_matrix_scaled /= (np.linalg.norm(feature_matrix_scaled, axis=1, keepdims=True) + 1e-8)
+feature_matrix_scaled /= (
+    np.linalg.norm(feature_matrix_scaled, axis=1, keepdims=True) + 1e-8
+)
 
 filename = os.path.join(os.path.dirname(__file__), "../..", "features_and_index.npz")
 np.savez_compressed(
@@ -269,8 +314,4 @@ np.savez_compressed(
 
 end = time.time()
 print(f"Exported feature matrix and indexes in {end - start:.2f} seconds")
-
-
 print("DONE")
-
-
