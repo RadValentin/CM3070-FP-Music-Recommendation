@@ -55,22 +55,16 @@
 ### 23 August
 - Add tests for recommendation endpoint
 ### 03 September
-- Add script for compiling many JSON files into one NDJSON to speed up data ingest process by reducing file open/close overhead. Dataset load time time went from 33s to 29s for 100k records.
+- Iron out data processing:
+  - Add script for compiling many JSON files into one NDJSON to speed up data ingest process by reducing file open/close overhead. Dataset load time time went from 33s to 29s for 100k records (it's going to matter for 30M records).
+  - Update DB build script to accept either path to JSON files or path to merged NDJSON (split into multiple functions if needed), store paths in some sort of `.env` file
+  - Refactor scripts as Django commands: merging JSON files (`python manage.py merge_json`), building db (`python manage.py build_db`), showing recommendation in console (`python manage.py recommend`)
+- Ensure metadata correctness: when processing the MBID must match a standard format (regex)
 
 ## Final Stretch Plan
-
-### 03 September
-- Iron out data processing:
-  - Script for compiling many JSON files into one NDJSON
-  - Update DB build script to accept either path to JSON files or path to merged NDJSON (split into multiple functions if needed), store paths in some sort of `.env` file
-  - Ensure metadata correctness:
-    - MBID matches standard format (regex)
-    - Multiple artists can be associated with a track (M2M relationship)
-    - Inspect the data manually (quick look, queries)
-  - Compute popularity metric = number of duplicate submissions for a track, store in either DB or in-memory
-
 ### 04 September
-- Finalize API
+- Compute popularity metric = number of duplicate submissions for a track, store in either DB or in-memory
+- Design API
 - Implement search endpoint
 
 ### 05 September

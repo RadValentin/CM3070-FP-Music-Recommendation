@@ -10,6 +10,16 @@ pip install -r requirements.txt
 ```
 
 ## (Optional) Building the database from scratch
+```bash
+cd backend/
+# Merge multiple JSON files into one NDJSON to speed up build times
+python manage.py merge_json
+
+# Build the Django DB and the in-memory vector store for audio features
+python manage.py build_db
+```
+
+
 Ideally you should have access to the already-built database in SQLite format. If this isn't the case you can replicate using the commands below. The first step is to download all the required DB dumps from other services:
 
 ```bash

@@ -1,14 +1,10 @@
 # Data Processing for Music Recommendation System
-import io
-import os
-import sys
-import django
-import time
+import io, os, sys, time
 import numpy as np
 import pandas as pd
 from . import track_processing_helpers as tph
 from dotenv import dotenv_values
-from typing import Iterable, Optional
+from typing import Optional
 from collections import Counter
 from pathlib import Path
 from sklearn.preprocessing import StandardScaler
@@ -19,14 +15,14 @@ from recommend_api.models import Track, Artist, TrackArtist, Album, AlbumArtist
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 
-def build_database(use_sample: bool, show_log: bool, parts: Optional[str]):
+def build_database(use_sample: bool, show_log: bool, num_parts: Optional[int]):
     BASE_DIR = Path(__file__).resolve().parent.parent
     config = dotenv_values(BASE_DIR / ".env")
     # globals used to track how many records are skipped while processing
     duplicate_count = 0
     tph.mute_logs = not show_log
 
-    # Phase 1 - Load JSON data about tracks into memory
+    ## NOTE: Phase 1 - Load JSON data about tracks into memory
 
     # Different directories where AcousticBrainz data is stored
     if use_sample:
@@ -44,21 +40,25 @@ def build_database(use_sample: bool, show_log: bool, parts: Optional[str]):
     Track.objects.all().delete()
     Artist.objects.all().delete()
 
+    # If the user already compiled the JSON files from the dump into NDJSONs, 
+    # store a list of the files, we'll check and process later on, restrict based on param.
     merged_json_paths = [
-        # "D:/Datasets/AcousticBrainz/Sample/merged-highlevel-0.ndjson"
+        os.path.join(dataset_path, fname)
+        for fname in os.listdir(dataset_path)
+        if fname.lower().endswith(".ndjson")
     ]
+    merged_json_paths = merged_json_paths[:num_parts]    
 
     album_index = {}  # keep track of unique album names, indexed by MBID
     artist_index = {}  # keep track of unique artist names, indexed by MBID
     track_index = {}  # keep track of unique track data, indexed by MBID
-    trackartist_set = (
-        set()
-    )  # set of all Track-Artist M2M pairings, to avoid duplication
+    trackartist_set = set() # set of all Track-Artist M2M pairings, to avoid duplication
     albumartist_set = set()  # set of all Album-Artist M2M pairings
     track_features_list = []  # list of feature values for each track
 
     start = time.time()
 
+    # If NDJSON files were not found, make a list of each JSON file in the dump
     if len(merged_json_paths) < 1:
         # paths to JSON files, each containing metadata and high-level features for one track
         json_paths = []
@@ -78,15 +78,17 @@ def build_database(use_sample: bool, show_log: bool, parts: Optional[str]):
 
     processing_counter = 0
     with ThreadPoolExecutor() as executor:
-        # TODO: To safely process the full 30M dataset on 16GB RAM, break JSON loading and inserts into smaller chunks
-        # e.g. process 5–10 million files at a time to avoid memory exhaustion.
+        # Process file-by-file (individual JSONs)
         if len(merged_json_paths) < 1:
             futures = [executor.submit(tph.process_file, path) for path in json_paths]
         else:
-            with open(merged_json_paths[0], "rb") as f:
-                futures = [
-                    executor.submit(tph.extract_data_from_json_str, line) for line in f
-                ]
+            # Process line-by-line (merged JSONs)
+            futures = []
+            for ndjson_path in merged_json_paths:
+                with open(ndjson_path, "rb") as f:
+                    futures.extend(
+                        executor.submit(tph.extract_data_from_json_str, line) for line in f
+                    )
 
         for future in futures:
             try:
@@ -113,7 +115,7 @@ def build_database(use_sample: bool, show_log: bool, parts: Optional[str]):
                 print(".", end="", flush=True)
         print("")
 
-    ## Phase 2 - Merge duplicate entries for tracks by selecting the most common value for each field
+    ## NOTE: Phase 2 - Merge duplicate entries for tracks by selecting the most common value for each field
 
     print("Will merge duplicate tracks.")
 
@@ -141,6 +143,7 @@ def build_database(use_sample: bool, show_log: bool, parts: Optional[str]):
             continue
 
         # Use a track as a base for fields that won't be selected
+        # TODO: What happens if values in the base track are invalid? artist, title
         base_track = tracks[0].copy()
 
         merged_track = {}
@@ -161,7 +164,7 @@ def build_database(use_sample: bool, show_log: bool, parts: Optional[str]):
 
     track_index = merged_tracks
 
-    ## Phase 3 - Build the DB models
+    ## NOTE: Phase 3 - Build the DB models
 
     print("Will build DB models.")
 
@@ -273,7 +276,7 @@ def build_database(use_sample: bool, show_log: bool, parts: Optional[str]):
         f"Inserted M2M pairings for TrackArtist and AlbumArtist in {end - start:.2f} seconds"
     )
 
-    # Phase 4 - Save data about audio features into vector files
+    ## NOTE: Phase 4 - Save data about audio features into vector files
 
     start = time.time()
     # Load the track audio features into a DataFrame and then export, keeping track

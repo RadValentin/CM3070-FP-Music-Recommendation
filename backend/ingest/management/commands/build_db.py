@@ -9,7 +9,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--sample",
             action="store_true",
-            help="Use the sample dataset instead of full high-level parts.",
+            help="Use the sample dataset instead of full high-level paths.",
         )
         parser.add_argument(
             "--log",
@@ -28,7 +28,7 @@ class Command(BaseCommand):
             build_database(
                 use_sample=options["sample"],
                 show_log=options["log"],
-                parts=options["parts"],
+                num_parts=options["parts"],
             )
         except Exception as e:
             raise CommandError(str(e))
