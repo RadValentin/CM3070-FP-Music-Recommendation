@@ -49,11 +49,39 @@
 ### 21 August
 - Begin API development, add endpoint for track details `api/track/<str:musicbrainz_recordingid>/`
 - Extract recommendation logic to a separate module
-## 22 August
+### 22 August
 - Add tests for recommendation logic
 - Add endpoint for making recommendations `api/similar/`
-# 23 August
+### 23 August
 - Add tests for recommendation endpoint
 
-### TODO
-- Cover the module materials
+## Final Stretch Plan
+
+### 03 September
+- Iron out data processing:
+  - Script for compiling many JSON files into one NDJSON
+  - Update DB build script to accept either path to JSON files or path to merged NDJSON (split into multiple functions if needed), store paths in some sort of `.env` file
+  - Ensure metadata correctness:
+    - MBID matches standard format (regex)
+    - Multiple artists can be associated with a track (M2M relationship)
+    - Inspect the data manually (quick look, queries)
+  - Compute popularity metric = number of duplicate submissions for a track, store in either DB or in-memory
+
+### 04 September
+- Finalize API
+- Implement search endpoint
+
+### 05 September
+- Begin developing front-end to consume API: search and recommend
+
+### 06 September
+- Document development in report
+- Document literature review
+
+### Second-to-last week
+- 1 day for report writing
+- Rest spent on API and front-end
+
+### Last week
+- Polish implementation
+- Finalize report
