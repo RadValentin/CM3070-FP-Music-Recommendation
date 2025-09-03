@@ -83,6 +83,7 @@
 ### Second-to-last week
 - 1 day for report writing
 - Rest spent on API and front-end
+- Data exploration: genre distribution, popular tracks, popular artists
 
 ### Last week
 - Polish implementation

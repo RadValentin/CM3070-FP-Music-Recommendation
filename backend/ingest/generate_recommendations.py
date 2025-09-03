@@ -4,9 +4,9 @@ import io, os, sys, time, django
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 # Django setup so we can access ORM models
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(os.getcwd()))))
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "music_recommendation.settings")
-django.setup()
+# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(os.getcwd()))))
+# os.environ.setdefault("DJANGO_SETTINGS_MODULE", "music_recommendation.settings")
+# django.setup()
 
 from recommend_api.models import Track
 import recommend_api.recommender as rec

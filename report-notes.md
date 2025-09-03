@@ -79,7 +79,6 @@ For the 100k records in the high-level sample dataset:
 - Takes 34.79s to read all of the JSON files and build the model objects
 - Takes 6.82s to insert the data in the DB
 - 1475 records don't have any associated release dates
-- In general, the dates in the dataset are inconsistently formatted, some given as only a year, some in ISO date format, some in SQL Datetime while others in ISO 8601 with Zulu (UTC).
 
 For 1M records high-level dataset:
 - Takes 362s to read all of the JSON files and build the model objects
@@ -89,10 +88,14 @@ For 1M records high-level dataset:
 - 297011 records are duplicates
 - 697291 records are left at the end to be inserted into the DB
 - DB size on disk is 190 MB
-- The pitfalls of user-generated data
-  - popular songs and artists (Nirvana, Beatles) appear frequently
-  - lots of generic placeholder titles: [untitled], End Credits, Finale, [unknown]
-  - character songs from anime or games, ex: `三千院ナギ starring 釘宮理恵`, `綾崎ハヤテ starring 白石涼子`
+
+
+The pitfalls of user-generated data:
+- some release dates are inconsistently formatted, given as only a year, others in ISO date format, in SQL Datetime format, in ISO 8601 with Zulu (UTC) etc
+- popular songs and artists (Nirvana, Beatles) appear frequently
+- lots of generic placeholder titles: [untitled], End Credits, Finale, [unknown] for tracks
+- character songs from anime or games, ex: `三千院ナギ starring 釘宮理恵`, `綾崎ハヤテ starring 白石涼子`
+- keys for artists are given as a string "Jay-Z & Beyonce" while their MBIDs as an array, not clear if the order is maintained, splitting the string might not be valid (maybe band name has & in it, ex: "Earth Wind & Fire"). The track is skipped if not both the artists and their ids are given as arrays.
 
 - > IMPORTANT: I only loaded 1M records and got the times above, need to load ALL 30M records from all archives
 

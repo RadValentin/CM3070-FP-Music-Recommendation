@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    "ingest",
     "recommend_api",
     "rest_framework",
     "django.contrib.admin",

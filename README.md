@@ -52,11 +52,12 @@ md5sum -c MD5SUMS
 
 ```bash
 # Run the script that builds the DB
-cd backend/scripts/acoustic-brainz
-python scripts/populate_db.py
+python manage.py build_db
 ```
 
-## Folder Structure
+Note: Run with `--sample` param to load the 100k record sample dataset
+
+## Folder Structure (TODO)
 
 - `backend`
   - `music_recommendation` - the main Django project
@@ -100,7 +101,9 @@ I've chosen "NextTrack: A music recommendation API" as the template for my proje
 - MusicBrainz recording: https://musicbrainz.org/recording/87f40400-1009-4578-991f-421c1ad330eb (Enter Sandman by Metallica)
 - AcousticBrainz recording:  https://acousticbrainz.org/2dacc772-bff6-4347-a586-8bff3a7d7c79 (Nothing Else Matters by Metallica)
 
-Recommendation script output, `python test3.py --mbid=87f40400-1009-4578-991f-421c1ad330eb`
+The recommendation script
+
+Recommendation script output, `python manage.py recommend --mbid 87f40400-1009-4578-991f-421c1ad330eb`
 ```
 diag full: mean=-0.037 std=0.459 p95=0.825 max=0.987
 diag prefilter[55022]: mean=0.003 std=0.451 p95=0.841 max=0.987
