@@ -67,7 +67,7 @@ def generate_recommendations(target_mbid: str):
     )
 
     print("\nRecommendations:")
-    header = f"{'Artist':20} | {'Title':30} | {'Year':6} | {'Dortmund':10} | {'Rosamerica':10} | {'Sim':7} | {'MBID':10}"
+    header = f"{'Artist':20} | {'Title':30} | {'Year':6} | {'Dort':10} | {'Rosa':4} | {'Sim':7} | {'MBID':10}"
     print(header)
     print("-" * len(header))
 
@@ -91,7 +91,7 @@ def generate_recommendations(target_mbid: str):
 
         print(
             f'{artist_name[:20]:20} | {track_obj.title[:30]:30} | {str(track["year"]):6} | '
-            f'{track["genre_dortmund"]:10} | {track["genre_rosamerica"]:10} | {track["similarity"]:6.5f} | {track["mbid"]}'
+            f'{track["genre_dortmund"]:10} | {track["genre_rosamerica"]:4} | {track["similarity"]:6.5f} | {track["mbid"]}'
         )
 
     # Print statistics

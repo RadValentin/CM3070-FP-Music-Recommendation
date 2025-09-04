@@ -60,6 +60,8 @@
   - Update DB build script to accept either path to JSON files or path to merged NDJSON (split into multiple functions if needed), store paths in some sort of `.env` file
   - Refactor scripts as Django commands: merging JSON files (`python manage.py merge_json`), building db (`python manage.py build_db`), showing recommendation in console (`python manage.py recommend`)
 - Ensure metadata correctness: when processing the MBID must match a standard format (regex)
+### 04 September
+- Select most common values for album and artists when merging tracks, previously we were populating these fields with the values from the first encountered instance of a track.
 
 ## Final Stretch Plan
 ### 04 September

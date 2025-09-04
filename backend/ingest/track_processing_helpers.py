@@ -1,5 +1,7 @@
 import re, os, orjson, json
-from datetime import datetime
+from collections import Counter, defaultdict
+from datetime import datetime, date
+from statistics import median_low
 
 mute_logs = False
 invalid_date_count = 0
@@ -114,7 +116,7 @@ def extract_artist_info(tags):
 
 def extract_album_info(tags):
     """
-    Returns a list of tuples (album_id, album_name, release_date)
+    Returns a tuple (album_id, album_name, release_date)
     """
     global invalid_date_count
     # Date parsing, look through multiple fields to increase chances of finding a valid date
@@ -209,3 +211,62 @@ def process_file(json_path):
     except Exception as ex:
         log(f"Could not process file ({ex}): {os.path.normpath(json_path)}")
         return None
+
+
+def merge_album_info(tracks):
+    """
+    Given a list of duplicate tracks, merge album information by selecting most representative values:
+    1) Pick the most common `album_id` across duplicates.
+    2) Among entries with that `album_id`, pick most common name.
+    3) For date, pick the median date (robust to outliers).
+
+    `tracks: list[dict]` where each dict has `"album_info": (album_id, album_name, release_date)`
+
+    Returns: (album_id, album_name, release_date) or None
+    """
+    id_counter = Counter()
+    name_counter = defaultdict(list)
+    date_counter = defaultdict(list)
+
+    for track in tracks:
+        album = track.get("album_info")
+        if not album:
+            continue
+
+        album_id, album_name, release_date = album
+        if album_id:
+            id_counter[album_id] += 1
+        if album_name:
+            name_counter[album_id].append(album_name)
+        if release_date and isinstance(release_date, date):
+            date_counter[album_id].append(release_date)
+    
+    if not id_counter:
+        return None
+
+    best_id = id_counter.most_common(1)[0][0]
+    best_name = Counter(name_counter[best_id]).most_common(1)[0][0] if name_counter[best_id] else None
+    best_date = median_low(date_counter[best_id]) if name_counter[best_id] else None
+
+    return (best_id, best_name, best_date)
+
+
+def merge_artist_pairs(tracks):
+    """
+    Given a list of duplicate tracks, extract a list of tuples from each (artist_id, artist_name) 
+    and merge the tracks by selecting the most common tuple combination.
+    """
+    # Count each unique, sorted artist pair combination
+    pair_counter = Counter()
+    for track in tracks:
+        artist_pairs = track.get("artist_pairs")
+        if artist_pairs:
+            artist_pairs_sorted = tuple(sorted(artist_pairs, key=lambda tup: tup[0]))
+            pair_counter[artist_pairs_sorted] += 1
+
+    if not pair_counter:
+        return []
+
+    # Get the most common artist pair combination
+    most_common_pair, _ = pair_counter.most_common(1)[0]
+    return list(most_common_pair)

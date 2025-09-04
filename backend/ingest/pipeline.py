@@ -75,6 +75,8 @@ def build_database(use_sample: bool, show_log: bool, num_parts: Optional[int]):
 
         # json_paths = json_paths[0:1000] # use only a subset of the data, for debugging
         print(f"Will load {len(json_paths):,} records", end="", flush=True)
+    else:
+        print(f"Will load records from merged NDJSON", end="", flush=True)
 
     processing_counter = 0
     with ThreadPoolExecutor() as executor:
@@ -115,7 +117,9 @@ def build_database(use_sample: bool, show_log: bool, num_parts: Optional[int]):
                 print(".", end="", flush=True)
         print("")
 
+    
     ## NOTE: Phase 2 - Merge duplicate entries for tracks by selecting the most common value for each field
+    ## The goal is to have the most representative values for each feature among the duplicates of a track.
 
     print("Will merge duplicate tracks.")
 
@@ -123,27 +127,18 @@ def build_database(use_sample: bool, show_log: bool, num_parts: Optional[int]):
 
     # Numeric fields for which we'll select the median value between duplicates
     NUM_FIELDS = [
-        "danceability",
-        "aggressiveness",
-        "happiness",
-        "sadness",
-        "relaxedness",
-        "partyness",
-        "acousticness",
-        "electronicness",
-        "instrumentalness",
-        "tonality",
-        "brightness",
+        "duration",
+        "danceability", "aggressiveness", "happiness", "sadness", "relaxedness", "partyness", 
+        "acousticness", "electronicness", "instrumentalness", "tonality", "brightness"
     ]
     # Categorical fields for which we'll select the most common value between duplicates
-    CAT_FIELDS = ["genre_dortmund", "genre_rosamerica"]
+    CAT_FIELDS = ["title", "genre_dortmund", "genre_rosamerica"]
 
     for mbid, tracks in track_index.items():
         if not tracks:
             continue
 
         # Use a track as a base for fields that won't be selected
-        # TODO: What happens if values in the base track are invalid? artist, title
         base_track = tracks[0].copy()
 
         merged_track = {}
@@ -154,8 +149,12 @@ def build_database(use_sample: bool, show_log: bool, num_parts: Optional[int]):
 
         # CATEGORICAL (single-label fallback): pick most common non-empty
         for field in CAT_FIELDS:
-            vals = [t.get(field) for t in tracks if t.get(field)]
-            merged_track[field] = Counter(vals).most_common(1)[0][0] if vals else None
+            values = [t.get(field) for t in tracks if t.get(field)]
+            merged_track[field] = Counter(values).most_common(1)[0][0] if values else None
+
+        # TUPLES: pick most common
+        merged_track["artist_pairs"] = tph.merge_artist_pairs(tracks)
+        merged_track["album_info"] = tph.merge_album_info(tracks)
 
         # Use values from the base track + values selected by most common
         merged_track = base_track | merged_track
@@ -164,6 +163,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: Optional[int]):
 
     track_index = merged_tracks
 
+    
     ## NOTE: Phase 3 - Build the DB models
 
     print("Will build DB models.")
@@ -198,7 +198,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: Optional[int]):
         track_list.append(track_obj)
 
         for artist_id, artist_name in artist_pairs:
-            # Store artist data in a separate hashmap and associtate it with the track
+            # Store artist data in a separate hashmap and associate it with the track
             if artist_id not in artist_index or artist_index[artist_id] is None:
                 artist_index[artist_id] = Artist(
                     musicbrainz_artistid=artist_id, name=artist_name
@@ -257,7 +257,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: Optional[int]):
     print(f"\nInserted {len(track_list)} records in {end - start:.2f} seconds")
 
     start = time.time()
-    # M2M pairing were stored as sets to avoid dulication, convert them to lists and create objects.
+    # M2M pairing were stored as sets to avoid duplication, convert them to lists and create objects.
     trackartist_list = []
     for track_id, artist_id in trackartist_set:
         trackartist_list.append(
@@ -276,6 +276,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: Optional[int]):
         f"Inserted M2M pairings for TrackArtist and AlbumArtist in {end - start:.2f} seconds"
     )
 
+    
     ## NOTE: Phase 4 - Save data about audio features into vector files
 
     start = time.time()
