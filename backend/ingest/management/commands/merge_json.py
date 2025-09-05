@@ -17,13 +17,25 @@ class Command(BaseCommand):
         parser.add_argument(
             "--parts",
             type=int,
-            default=1,
-            help="How many of the 30 AB dumps to use (each folder has 1M records)",
+            default=None,
+            help="How many of the 30 AB dumps to use, each folder has 1M records (optional).",
+        )
+        parser.add_argument(
+            "--parts_list",
+            type=str,
+            default=None,
+            help="List of part indexes to process (optional).",
         )
 
     def handle(self, *args, **options):
         try:
-            merge_json(use_sample=options["sample"], num_parts=options["parts"])
+            if options["parts_list"]:
+                parts_list = [int(part) for part in options["parts_list"].split(",")]
+                merge_json(use_sample=options["sample"], parts_list=parts_list)
+            elif options["parts"]:
+                merge_json(use_sample=options["sample"], num_parts=options["parts"])
+            else:
+                merge_json(use_sample=options["sample"])
         except Exception as e:
             raise CommandError(str(e))
 
@@ -68,7 +80,7 @@ def process_batch(paths):
     return b"".join(out)
 
 
-def merge_json(use_sample: bool, num_parts: int):
+def merge_json(use_sample: bool, num_parts: int = None, parts_list: list = None):
     BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
     config = dotenv_values(BASE_DIR / ".env")
 
@@ -85,7 +97,10 @@ def merge_json(use_sample: bool, num_parts: int):
         for fname in os.listdir(dataset_path)
         if os.path.isdir(os.path.join(dataset_path, fname))
     ]
-    parts_dirs = parts_dirs[:num_parts]
+    if parts_list:
+        parts_dirs = [parts_dirs[i] for i in parts_list]
+    elif num_parts:
+        parts_dirs = parts_dirs[:num_parts]
 
     for i, dir in enumerate(parts_dirs):
         start = time.perf_counter()
@@ -97,7 +112,10 @@ def merge_json(use_sample: bool, num_parts: int):
         )
 
         written = 0
-        OUT = os.path.join(dataset_path, f"merged-{i}.ndjson")
+        # if you specify --parts_list 2,5,7, the output files will be 
+        # merged-2.ndjson, merged-5.ndjson, merged-7.ndjson
+        part_index = parts_list[i] if parts_list else i
+        OUT = os.path.join(dataset_path, f"merged-{part_index}.ndjson")
         with ThreadPoolExecutor(max_workers=WORKERS) as ex, open(
             OUT, "wb", buffering=1024 * 1024
         ) as out:

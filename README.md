@@ -7,46 +7,70 @@
 # install dependencies
 cd backend/
 pip install -r requirements.txt
+python manage.py migrate
 ```
 
 ## (Optional) Building the database from scratch
+Ideally you should have access to the already-built database in SQLite format and the features NPZ file. If this isn't the case you can replicate the DB from scratch using the instructions below. 
+
+The first step is to download the dataset dumps from AcousticBrainz, these contain the audio features used to determine song similarity, link: https://acousticbrainz.org/download. I recommend unzipping each part into a separate directory using a structure like this:
+
+- `AcousticBrainz`
+  - `Sample`
+    - `acousticbrainz-highlevel-sample-json-20220623-0`
+  - `High-Level`
+    - `acousticbrainz-highlevel-json-20220623-0`
+    - `acousticbrainz-highlevel-json-20220623-1`
+    - `...`
+
+You download the datasets from a browser or by using these commands:
+
+```bash
+# Sample DB dump with 100k entries, good for development
+mkdir Sample
+cd Sample
+wget -P . https://data.metabrainz.org/pub/musicbrainz/acousticbrainz/dumps/acousticbrainz-sample-json-20220623/acousticbrainz-highlevel-sample-json-20220623-0.tar.zst
+
+# Full DB dump with 30M entries, good for production
+mkdir High-level
+cd High-level
+wget -r -np -nH --cut-dirs=5 -P . https://data.metabrainz.org/pub/musicbrainz/acousticbrainz/dumps/acousticbrainz-highlevel-json-20220623/
+
+# Check that the downloaded files aren't corrupted
+sha256sum -c sha256sums
+
+# Unzip the archives:
+sudo apt install zstd
+unzstd acousticbrainz-highlevel-sample-json-20220623-0.tar.zst
+```
+
+Then update the project's `.env` file with the paths to the dumps, ex:
+
+```bash
+AB_HIGHLEVEL_ROOT=D:/Datasets/AcousticBrainz/High-level
+AB_SAMPLE_ROOT=D:/Datasets/AcousticBrainz/Sample
+```
+
+Now you can use the management commands in the project to merge all the JSON files into larger NDJSONs which will reduce file access bottlenecks during the DB build process
+
 ```bash
 cd backend/
 # Merge multiple JSON files into one NDJSON to speed up build times
-python manage.py merge_json
-
-# Build the Django DB and the in-memory vector store for audio features
-python manage.py build_db
+python manage.py merge_json # Merge all available files OR
+python manage.py merge_json --parts 2 # Merge only the first 2 parts of dataset OR
+python manage.py merge_json --parts_list 5,6 # Merge parts 5 and 6 of the dataset
 ```
 
-
-Ideally you should have access to the already-built database in SQLite format. If this isn't the case you can replicate using the commands below. The first step is to download all the required DB dumps from other services:
+Finally you can now build the DB:
 
 ```bash
-# Download DB dumps from AcousticBrainz, these contain the audio features used to determine 
-# song similarity. Link: https://acousticbrainz.org/download
-
-# Sample DB dump with 100k entries, good for development
-cd backend/scripts/acoustic-brainz
-mkdir sample
-cd sample
-wget -P . https://data.metabrainz.org/pub/musicbrainz/acousticbrainz/dumps/acousticbrainz-sample-json-20220623/acousticbrainz-highlevel-sample-json-20220623-0.tar.zst
-
-sudo apt install zstd
-unzstd acousticbrainz-highlevel-sample-json-20220623-0.tar.zst
-
-# Full DB dump with 30M entries, good for production
-cd ..
-mkdir highlevel
-cd highlevel
-wget -r -np -nH --cut-dirs=5 -P . https://data.metabrainz.org/pub/musicbrainz/acousticbrainz/dumps/acousticbrainz-highlevel-json-20220623/
-
-# check that the files downloaded without issues
-sha256sum -c sha256sums
-
-# TODO: Unzip all the archives.
-
+# Build the Django DB and the in-memory vector store for audio features
+python manage.py build_db # Use all available parts of dataset OR
+python manage.py build_db --parts 2 # Use 2 parts of dataset OR
+python manage.py build_db --sample # Use the sample dataset with 100k entries
 ```
+
+### TODO: Include data from MusicBrainz if needed
 
 ```bash
 # Download DB dumps from MusicBrainz, these contain the metadata needed to display infomation about
@@ -55,32 +79,15 @@ sha256sum -c sha256sums
 wget -r -np -nH --cut-dirs=5 -P . https://data.metabrainz.org/pub/musicbrainz/data/fullexport/20250806-001852/
 
 md5sum -c MD5SUMS
-
-# TODO: Extend this once DB schema is more mature.
 ```
 
-
-```bash
-# Run the script that builds the DB
-python manage.py build_db
-```
-
-Note: Run with `--sample` param to load the 100k record sample dataset
-
-## Folder Structure (TODO)
+## Folder Structure
 
 - `backend`
   - `music_recommendation` - the main Django project
   - `recommend_api` - the Django app that provides the music recommendation API and serves the HTML/JS/CSS assets
-  - `scripts`
-    - `acoustic-brainz`
-      - `sample` - 100k tracks dataset *(not included in repo)*
-      - `highlevel-partial` - 1M tracks dataset *(not included in repo)*
-      - `highlevel-full` - 30M tracks dataset *(not included in repo)*
+  - `ingest` - scripts and commands for processing the datasets and building the DB
 - `frontend` - assets that are bundled into static assets and served by the `recommend_api` app
-
-> [!NOTE]
-> The AcousticBrainz datasets are not included in the repo due to their size. If you want to replicate the app from scratch, you can download them from here: https://acousticbrainz.org/download and unzip them in the appropiate folders (see above). I recommend using the *sample* dataset as it provides enough data for development without taking up too much space.
 
 ## Prototype App
 
