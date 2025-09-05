@@ -86,7 +86,8 @@ def build_database(use_sample: bool, show_log: bool, num_parts: Optional[int]):
         else:
             # Process line-by-line (merged JSONs)
             futures = []
-            for ndjson_path in merged_json_paths:
+            for i, ndjson_path in enumerate(merged_json_paths):
+                print(f"({i+1}/{len(merged_json_paths)}) Loading {ndjson_path}")
                 with open(ndjson_path, "rb") as f:
                     futures.extend(
                         executor.submit(tph.extract_data_from_json_str, line) for line in f
@@ -158,8 +159,8 @@ def build_database(use_sample: bool, show_log: bool, num_parts: Optional[int]):
 
         # Use values from the base track + values selected by most common
         merged_track = base_track | merged_track
+        merged_track["submissions"] = len(tracks)
         merged_tracks[mbid] = merged_track
-        # TODO: Add a popularity field proportional to the number of duplicates
 
     track_index = merged_tracks
 
@@ -170,17 +171,8 @@ def build_database(use_sample: bool, show_log: bool, num_parts: Optional[int]):
 
     track_list = []
     FEATURE_FIELDS = [
-        "danceability",
-        "aggressiveness",
-        "happiness",
-        "sadness",
-        "relaxedness",
-        "partyness",
-        "acousticness",
-        "electronicness",
-        "instrumentalness",
-        "tonality",
-        "brightness",
+        "danceability", "aggressiveness", "happiness", "sadness", "relaxedness", "partyness", 
+        "acousticness", "electronicness", "instrumentalness", "tonality", "brightness",
     ]
 
     for track_id, track in track_index.items():
@@ -193,7 +185,8 @@ def build_database(use_sample: bool, show_log: bool, num_parts: Optional[int]):
             duration=track["duration"],
             genre_dortmund=track["genre_dortmund"],
             genre_rosamerica=track["genre_rosamerica"],
-            file_path="W",
+            submissions=track["submissions"],
+            file_path=track["file_path"],
         )
         track_list.append(track_obj)
 

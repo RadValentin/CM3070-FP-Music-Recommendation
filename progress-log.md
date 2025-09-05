@@ -62,24 +62,25 @@
 - Ensure metadata correctness: when processing the MBID must match a standard format (regex)
 ### 04 September
 - Select most common values for album and artists when merging tracks, previously we were populating these fields with the values from the first encountered instance of a track.
+- Track how many duplicates each track has and store in DB under `submissions` in `Track` model.
+### 05 September
+
 
 ## Final Stretch Plan
-### 04 September
-- Compute popularity metric = number of duplicate submissions for a track, store in either DB or in-memory
-- Design API
-- Implement search endpoint
-
 ### 05 September
-- Begin developing front-end to consume API: search and recommend
+- Design API
 
 ### 06 September
 - Document development in report
 - Document literature review
 
 ### Second-to-last week
+- Implement search endpoint
+- Begin developing front-end to consume API: search and recommend
 - 1 day for report writing
 - Rest spent on API and front-end
 - Data exploration: genre distribution, popular tracks, popular artists
+- Include popularity as a way of ranking results
 
 ### Last week
 - Polish implementation
