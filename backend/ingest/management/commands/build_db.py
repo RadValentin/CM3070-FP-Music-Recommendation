@@ -19,16 +19,27 @@ class Command(BaseCommand):
         parser.add_argument(
             "--parts",
             type=int,
-            default=1,
+            default=None,
             help="How many of the 30 AB dumps to use (each folder has 1M records)",
+        )
+        parser.add_argument(
+            "--parts_list",
+            type=str,
+            default=None,
+            help="List of part indexes to process (optional).",
         )
 
     def handle(self, *args, **options):
         try:
+            parts_list = options.get("parts_list", None)
+            if parts_list:
+                parts_list = [int(part) for part in options["parts_list"].split(",")]
+
             build_database(
                 use_sample=options["sample"],
                 show_log=options["log"],
                 num_parts=options["parts"],
+                parts_list=parts_list
             )
         except Exception as e:
             raise CommandError(str(e))

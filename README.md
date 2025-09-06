@@ -13,14 +13,14 @@ python manage.py migrate
 ## (Optional) Building the database from scratch
 Ideally you should have access to the already-built database in SQLite format and the features NPZ file. If this isn't the case you can replicate the DB from scratch using the instructions below. 
 
-The first step is to download the dataset dumps from AcousticBrainz, these contain the audio features used to determine song similarity, link: https://acousticbrainz.org/download. I recommend unzipping each part into a separate directory using a structure like this:
+The first step is to download the dataset dumps from AcousticBrainz, these contain track metadata and the audio features used to determine song similarity, link: https://acousticbrainz.org/download. I recommend using a structure like this:
 
 - `AcousticBrainz`
   - `Sample`
-    - `acousticbrainz-highlevel-sample-json-20220623-0`
+    - `acousticbrainz-highlevel-sample-json-20220623-0.tar.zst`
   - `High-Level`
-    - `acousticbrainz-highlevel-json-20220623-0`
-    - `acousticbrainz-highlevel-json-20220623-1`
+    - `acousticbrainz-highlevel-json-20220623-0.tar.zst`
+    - `acousticbrainz-highlevel-json-20220623-1.tar.zst`
     - `...`
 
 You download the datasets from a browser or by using these commands:
@@ -38,10 +38,6 @@ wget -r -np -nH --cut-dirs=5 -P . https://data.metabrainz.org/pub/musicbrainz/ac
 
 # Check that the downloaded files aren't corrupted
 sha256sum -c sha256sums
-
-# Unzip the archives:
-sudo apt install zstd
-unzstd acousticbrainz-highlevel-sample-json-20220623-0.tar.zst
 ```
 
 Then update the project's `.env` file with the paths to the dumps, ex:
@@ -51,17 +47,7 @@ AB_HIGHLEVEL_ROOT=D:/Datasets/AcousticBrainz/High-level
 AB_SAMPLE_ROOT=D:/Datasets/AcousticBrainz/Sample
 ```
 
-Now you can use the management commands in the project to merge all the JSON files into larger NDJSONs which will reduce file access bottlenecks during the DB build process
-
-```bash
-cd backend/
-# Merge multiple JSON files into one NDJSON to speed up build times
-python manage.py merge_json # Merge all available files OR
-python manage.py merge_json --parts 2 # Merge only the first 2 parts of dataset OR
-python manage.py merge_json --parts_list 5,6 # Merge parts 5 and 6 of the dataset
-```
-
-Finally you can now build the DB:
+Finally you can now build the SQLite database and the features file (`features_and_index.npz`):
 
 ```bash
 # Build the Django DB and the in-memory vector store for audio features

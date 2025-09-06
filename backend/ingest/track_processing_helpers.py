@@ -1,4 +1,5 @@
-import re, os, orjson, json
+import re, os, orjson, json, tarfile
+import zstandard as zstd
 from collections import Counter, defaultdict
 from datetime import datetime, date
 from statistics import median_low
@@ -119,6 +120,14 @@ def extract_album_info(tags):
     Returns a tuple (album_id, album_name, release_date)
     """
     global invalid_date_count
+    album_id = tags["musicbrainz_albumid"][0]
+    album_name = tags["album"][0]
+
+    if not album_id or not album_name:
+        raise ValueError(
+            f"Missing album info on track: {tags.get('artist', [None])[0]} - {tags.get('title', [None])[0]}, album id/name: {album_id}, {album_name}"
+        )
+
     # Date parsing, look through multiple fields to increase chances of finding a valid date
     date = tags.get("date", [None])[0]
     originaldate = tags.get("originaldate", [None])[0]
@@ -159,8 +168,11 @@ def extract_data_from_json_str(json_str, file_path=None):
     try:
         mbid = tags["musicbrainz_recordingid"][0]
         if not is_mbid(mbid):
-            log(f"Bad MBID: {mbid}, path: {os.path.normpath(file_path)}")
-            return None
+            raise ValueError(f"bad MBID: {mbid}")
+        
+        title = tags["title"][0]
+        if not title:
+            raise ValueError("missing title")
         
         # Create a new track entry using the data from JSON
         track = {
@@ -200,19 +212,6 @@ def extract_data_from_json_str(json_str, file_path=None):
         return None
 
 
-def process_file(json_path):
-    """
-    Utility function for loading and parsing individual JSON files in parallel
-    """
-    try:
-        with open(json_path, "rb") as f:
-            json_string = f.read()
-        return extract_data_from_json_str(json_string, json_path)
-    except Exception as ex:
-        log(f"Could not process file ({ex}): {os.path.normpath(json_path)}")
-        return None
-
-
 def merge_album_info(tracks):
     """
     Given a list of duplicate tracks, merge album information by selecting most representative values:
@@ -246,7 +245,10 @@ def merge_album_info(tracks):
 
     best_id = id_counter.most_common(1)[0][0]
     best_name = Counter(name_counter[best_id]).most_common(1)[0][0] if name_counter[best_id] else None
-    best_date = median_low(date_counter[best_id]) if name_counter[best_id] else None
+    best_date = median_low(date_counter[best_id]) if date_counter[best_id] else None
+
+    if not best_id or not best_name or not best_date:
+        raise ValueError(f"Missing data during merge {best_id}, {best_name}, {best_date}")
 
     return (best_id, best_name, best_date)
 
@@ -270,3 +272,43 @@ def merge_artist_pairs(tracks):
     # Get the most common artist pair combination
     most_common_pair, _ = pair_counter.most_common(1)[0]
     return list(most_common_pair)
+
+
+def process_file(json_path):
+    """
+    Utility function for loading and parsing individual JSON files in parallel
+    """
+    try:
+        with open(json_path, "rb") as f:
+            json_string = f.read()
+        return extract_data_from_json_str(json_string, json_path)
+    except Exception as ex:
+        log(f"Could not process file ({ex}): {os.path.normpath(json_path)}")
+        return None
+
+
+def stream_json_from_tar_zst(path):
+    dctx = zstd.ZstdDecompressor()
+    with open(path, 'rb') as f:
+        with dctx.stream_reader(f) as stream:
+            with tarfile.open(fileobj=stream, mode='r|') as tar:
+                for member in tar:
+                    if member.isfile() and member.name.endswith('.json'):
+                        fileobj = tar.extractfile(member)
+                        if fileobj is None:
+                            continue
+                        try:
+                            data = fileobj.read()
+                            yield member.name, data
+                        except Exception as e:
+                            print(f"[WARN] Skipping {member.name}: {e}")
+
+
+def process_archive(archive_path):
+    results = []
+    for filename, raw_json in stream_json_from_tar_zst(archive_path):
+        result = extract_data_from_json_str(raw_json, filename)
+        if result:
+            results.append(result)
+    return results
+

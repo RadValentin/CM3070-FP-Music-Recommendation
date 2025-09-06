@@ -64,13 +64,18 @@
 - Select most common values for album and artists when merging tracks, previously we were populating these fields with the values from the first encountered instance of a track.
 - Track how many duplicates each track has and store in DB under `submissions` in `Track` model.
 ### 05 September
+- Modify how data is loaded into the DB:
+  - Data is read directly from the dump archives (`.tar.zst` format)
+  - Archives are processed in parallel as separate tasks (futures) `ThreadPoolExecutor > process_archive`
+  - Inside each thread, the archive is decompressed and its contained JSON files are streamed and processed sequentially (relevant data is extracted from JSON files)
+  - As each future completes, it creates a list of processed tracks which can be further processed in subsequent phases of the pipeline
+- Streaming the data removes the need to unzip the archives manually. We also don't need to worry about file access bottlenecks and don't need to merge the millions of JSON files into NDJSONs.
 
 
 ## Final Stretch Plan
-### 05 September
-- Design API
 
 ### 06 September
+- Design API
 - Document development in report
 - Document literature review
 

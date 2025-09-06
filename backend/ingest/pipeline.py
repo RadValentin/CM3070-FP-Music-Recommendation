@@ -12,10 +12,11 @@ from concurrent.futures import ThreadPoolExecutor
 from recommend_api.models import Track, Artist, TrackArtist, Album, AlbumArtist
 
 # Ensure print output is UTF-8 formatted so it can be logged to a file
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+# sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 
-def build_database(use_sample: bool, show_log: bool, num_parts: Optional[int]):
+def build_database(use_sample: bool, show_log: bool, num_parts: int = None, parts_list: list = None):
+    WORKERS = max(8, (os.cpu_count() or 8))
     BASE_DIR = Path(__file__).resolve().parent.parent
     config = dotenv_values(BASE_DIR / ".env")
     # globals used to track how many records are skipped while processing
@@ -40,14 +41,17 @@ def build_database(use_sample: bool, show_log: bool, num_parts: Optional[int]):
     Track.objects.all().delete()
     Artist.objects.all().delete()
 
-    # If the user already compiled the JSON files from the dump into NDJSONs, 
-    # store a list of the files, we'll check and process later on, restrict based on param.
-    merged_json_paths = [
+    # If the user downloaded the AB dataset parts archives then store a list of the files, 
+    # we'll check and process later on, restrict based on param.
+    archive_paths = [
         os.path.join(dataset_path, fname)
         for fname in os.listdir(dataset_path)
-        if fname.lower().endswith(".ndjson")
+        if fname.lower().endswith(".tar.zst")
     ]
-    merged_json_paths = merged_json_paths[:num_parts]    
+    if parts_list and len(archive_paths):
+        archive_paths = [archive_paths[i] for i in parts_list]
+    elif num_parts and len(archive_paths):
+        archive_paths = archive_paths[:num_parts]    
 
     album_index = {}  # keep track of unique album names, indexed by MBID
     artist_index = {}  # keep track of unique artist names, indexed by MBID
@@ -58,71 +62,78 @@ def build_database(use_sample: bool, show_log: bool, num_parts: Optional[int]):
 
     start = time.time()
 
-    # If NDJSON files were not found, make a list of each JSON file in the dump
-    if len(merged_json_paths) < 1:
+    # If archive files were not found, search for extracted JSON files
+    if len(archive_paths) < 1:
+        # Dumps are split into parts of 1M, restrict how many we load
+        parts_dirs = [
+            os.path.join(dataset_path, fname)
+            for fname in os.listdir(dataset_path)
+            if os.path.isdir(os.path.join(dataset_path, fname))
+        ]
+        if parts_list:
+            parts_dirs = [parts_dirs[i] for i in parts_list]
+        elif num_parts:
+            parts_dirs = parts_dirs[:num_parts]
         # paths to JSON files, each containing metadata and high-level features for one track
         json_paths = []
 
-        print("Building a list of JSON files", flush=True)
-
-        # walks through a branch of the directory tree, it will look at all subfolders and files recursively
-        for root, dirs, files in os.walk(dataset_path):
-            for name in files:
-                if name.lower().endswith(".json"):
-                    json_paths.append(os.path.join(root, name))
-                else:
-                    print(f"Non-JSON file skipped: {name}")
+        for i, parts_dir in enumerate(parts_dirs):
+            print(f"({i+1}/{len(parts_dirs)}) Building a list of JSON files in {parts_dir}", flush=True)
+            # walks through a branch of the directory tree, it will look at all subfolders and files recursively
+            for root, dirs, files in os.walk(parts_dir):
+                for name in files:
+                    if name.lower().endswith(".json"):
+                        json_paths.append(os.path.join(root, name))
+                    else:
+                        print(f"Non-JSON file skipped: {name}")
 
         # json_paths = json_paths[0:1000] # use only a subset of the data, for debugging
         print(f"Will load {len(json_paths):,} records", end="", flush=True)
     else:
-        print(f"Will load records from merged NDJSON", end="", flush=True)
+        print(f"Will load records from archives", end="", flush=True)
 
     processing_counter = 0
-    with ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor(max_workers=WORKERS) as executor:
         # Process file-by-file (individual JSONs)
-        if len(merged_json_paths) < 1:
+        if len(archive_paths) < 1:
             futures = [executor.submit(tph.process_file, path) for path in json_paths]
         else:
-            # Process line-by-line (merged JSONs)
-            futures = []
-            for i, ndjson_path in enumerate(merged_json_paths):
-                print(f"({i+1}/{len(merged_json_paths)}) Loading {ndjson_path}")
-                with open(ndjson_path, "rb") as f:
-                    futures.extend(
-                        executor.submit(tph.extract_data_from_json_str, line) for line in f
-                    )
+            # Process archive-by-archive
+            futures = [executor.submit(tph.process_archive, archive_path) for archive_path in archive_paths]
 
         for future in futures:
             try:
-                result = future.result()
+                future_results = future.result()
+                if not isinstance(future_results, list):
+                    future_results = [future_results]
             except Exception as e:
-                print("parse error:", e)
+                print("parse error:", e, flush=True)
                 continue
 
-            if not result:
-                continue
+            for result in future_results:
+                if not result:
+                    continue
 
-            track_id = result["musicbrainz_recordingid"]
-            # Use a hashmap to check if the track has been already added (from another submission),
-            # only load it if that submission failed (missing data)
-            if track_id not in track_index or track_index[track_id] is None:
-                track_index[track_id] = [result]
-            else:
-                duplicate_count += 1
-                track_index[track_id].append(result)
+                track_id = result["musicbrainz_recordingid"]
+                # Use a hashmap to check if the track has been already added (from another submission),
+                # only load it if that submission failed (missing data)
+                if track_id not in track_index or track_index[track_id] is None:
+                    track_index[track_id] = [result]
+                else:
+                    duplicate_count += 1
+                    track_index[track_id].append(result)
 
-            # print a dot every 1000 files
-            processing_counter += 1
-            if processing_counter % 1000 == 0:
-                print(".", end="", flush=True)
-        print("")
+                # print a dot every 1000 files
+                processing_counter += 1
+                if processing_counter % 1000 == 0:
+                    print(".", end="", flush=True)
+        print("", flush=True)
 
     
     ## NOTE: Phase 2 - Merge duplicate entries for tracks by selecting the most common value for each field
     ## The goal is to have the most representative values for each feature among the duplicates of a track.
 
-    print("Will merge duplicate tracks.")
+    print("Will merge duplicate tracks.", flush=True)
 
     merged_tracks = {}
 
@@ -154,8 +165,13 @@ def build_database(use_sample: bool, show_log: bool, num_parts: Optional[int]):
             merged_track[field] = Counter(values).most_common(1)[0][0] if values else None
 
         # TUPLES: pick most common
-        merged_track["artist_pairs"] = tph.merge_artist_pairs(tracks)
-        merged_track["album_info"] = tph.merge_album_info(tracks)
+        try:
+            merged_track["artist_pairs"] = tph.merge_artist_pairs(tracks)
+            merged_track["album_info"] = tph.merge_album_info(tracks)
+        except Exception as e:
+            print(e, base_track, base_track["file_path"])
+            err_paths = [track["file_path"] for track in tracks]
+            print(err_paths)
 
         # Use values from the base track + values selected by most common
         merged_track = base_track | merged_track
