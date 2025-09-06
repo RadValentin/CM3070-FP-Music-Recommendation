@@ -8,6 +8,10 @@ mute_logs = False
 invalid_date_count = 0
 missing_data_count = 0
 
+# Columns of multi-value features, we want to ensure same order is used when they're processed
+# For moods_mirex
+MIREX_ORDER = ["Cluster1", "Cluster2", "Cluster3", "Cluster4", "Cluster5"]
+
 MBID_REGEX = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
     re.IGNORECASE,
@@ -145,6 +149,20 @@ def extract_album_info(tags):
     return (tags["musicbrainz_albumid"][0], tags["album"][0], release_date)
 
 
+def extract_prob_vector(highlevel: dict, parent_key: str, order: list) -> list[float]:
+    """
+    Extracts and normalizes a probability vector from a nested dict.
+    - highlevel: source dictionary
+    - parent_key: key in highlevel containing the sub-dict
+    - order: list of keys specifying the output order
+    """
+    all = (highlevel or {}).get(parent_key, {})
+    probs = (all.get("all") or {})
+    vec = [float(probs.get(key, 0.0)) for key in order]
+    s = sum(vec)
+    return [x / s for x in vec] if s > 0 else vec
+
+
 def extract_data_from_json_str(json_str, file_path=None):
     """
     Returns a track dictionary with:
@@ -177,8 +195,8 @@ def extract_data_from_json_str(json_str, file_path=None):
         # Create a new track entry using the data from JSON
         track = {
             # Required metadata
-            "musicbrainz_recordingid": tags["musicbrainz_recordingid"][0],
-            "title": tags["title"][0],
+            "musicbrainz_recordingid": mbid,
+            "title": title,
             "duration": metadata["audio_properties"]["length"],
             "genre_dortmund": highlevel["genre_dortmund"]["value"],
             "genre_rosamerica": highlevel["genre_rosamerica"]["value"],
@@ -195,6 +213,8 @@ def extract_data_from_json_str(json_str, file_path=None):
             "instrumentalness": highlevel["voice_instrumental"]["all"]["instrumental"],
             "tonality": highlevel["tonal_atonal"]["all"]["tonal"],
             "brightness": highlevel["timbre"]["all"]["bright"],
+            # Multi-dimensional features
+            "moods_mirex": extract_prob_vector(highlevel, "moods_mirex", MIREX_ORDER)
         }
 
         # Associate artists and album with the track
@@ -274,6 +294,22 @@ def merge_artist_pairs(tracks):
     return list(most_common_pair)
 
 
+def merge_distribution(tracks, key):
+    """
+    Merge duplicate distributions (e.g. moods_mirex).
+    Assumes all vectors under `key` have the same length.
+    """
+    vecs = [t[key] for t in tracks if key in t and t[key]]
+    if not vecs:
+        return []
+
+    length = len(vecs[0])
+    merged = [sum(v[i] for v in vecs) / len(vecs) for i in range(length)]
+
+    s = sum(merged)
+    return [x / s for x in merged] if s > 0 else merged
+
+
 def process_file(json_path):
     """
     Utility function for loading and parsing individual JSON files in parallel
@@ -306,9 +342,9 @@ def stream_json_from_tar_zst(path):
 
 def process_archive(archive_path):
     results = []
+    print(f"Loading {archive_path}", flush=True)
     for filename, raw_json in stream_json_from_tar_zst(archive_path):
         result = extract_data_from_json_str(raw_json, filename)
         if result:
             results.append(result)
     return results
-

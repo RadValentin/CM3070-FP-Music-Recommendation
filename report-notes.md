@@ -148,7 +148,14 @@ We can't run cosine similarity against the DB data directly because it involves 
 Filtering is another complication. Ideally we should be able to pre-filter the list of candidate tracks to a smaller subset before running cosine similarity. Now the question becomes if we should store all data in memory but this dramatically increases RAM load. A hybrid approach is a good compromise here: keep the metadata in the DB for prefiltering and the audio features in memory.
 
 
-The recommendation script output for sample dataset (100k tracks):
+Now we'll focus on the quality of the recommendations made. We've selected 11 audio features which seemed most relevant for making recommendations: "danceability", "aggressiveness", "happiness", "sadness", "relaxedness", "partyness", "acousticness", "electronicness", "instrumentalness", "tonality", "brightness". We'll use cosine similarity to make recommendations based on how close two tracks are in feature space.
+
+The track selected as a target for testing is "Metallica - Enter Sandman". The reasoning for choosing it is that it's a popular track from a mainstream band so we can quickly assess if the recommendations made fit (other popular bands/tracks). Rock music is also heavily represented in the dataset (18.89%) so the recommender will have ample data to choose from, outlier recommendations can't be blamed on lack of data.
+
+> TODO: Insert image of genre distribution here according to the 2 classifiers. Note that Dortmund is inaccurate as it incorrectly classifies "Enter Sandman" as being electronic music, as well as 87% of the tracks in the dataset. We cannot rely on it for matching genre.
+
+
+The recommendation script output for the sample dataset (100k tracks):
 ```
 Cosine similarity search took 0.01 seconds
 Tracks similar to: Metallica - Enter Sandman (1991) [electronic] [roc]:
@@ -224,5 +231,173 @@ mean: 0.09563542157411575 std: 0.566411018371582 p95: 0.972338080406189 max: 0.9
 Script execution took 0.02 seconds
 ```
 
-Now most tracks (Rage, Anthrax, HammerFall, Mad Season, The Smashing Pumpkins, Ayreon) are aligning well with 1990s heavy metal, thrash, grunge, or alternative rock. However the recommendation with the highest similarity is an outlier (0.99993, Ornette Coleman - City Living ) and is jazz music incorrectly categorized as rock. This shows the limitations of the Acoustic Brainz dataset, we can't get accurate predictions if the data itself is flawed.
+Now most tracks (Rage, Anthrax, HammerFall, Mad Season, The Smashing Pumpkins, Ayreon) are aligning well with 1990s heavy metal, thrash, grunge, or alternative rock. However the recommendation with the highest similarity is an outlier (0.99993, Ornette Coleman - City Living ) and is jazz music incorrectly categorized as rock. This shows the limitations of the Acoustic Brainz dataset, we can't get accurate predictions if the data itself is flawed. Let's try increasing the dataset again, to 2M data points.
 
+```
+Cosine similarity search took 0.00500 seconds, compared against 58,534/1,117,188
+Tracks similar to: Metallica - Enter Sandman (1991) [electronic] [roc] [62c2e20a-559e-422f-a44c-9afa7882f0c4]:
+
+Recommendations:
+Artist               | Title                          | Year   | Dort       | Rosa | Sim
+--------------------------------------------------------------------------------------------
+Anti‐Flag            | We've Got His Gun              | 1998   | electronic | roc  | 0.97018
+The Smashing Pumpkin | Appels + Oranjes               | 1998   | electronic | roc  | 0.96874
+Kitchens of Distinct | Cowboys and Aliens             | 1994   | electronic | roc  | 0.96406
+Happy Drivers        | I Shot Da Sheriff (live)       | 1991   | electronic | roc  | 0.95316
+Dark Funeral         | Slava Satan                    | 1998   | electronic | roc  | 0.94786
+Ария                 | Бесы                           | 1991   | electronic | roc  | 0.94724
+Demoniac             | So Bar Gar                     | 1994   | rock       | roc  | 0.94720
+Isengard             | Total Death                    | 1995   | electronic | roc  | 0.94715
+Abscess              | Die Pig Die                    | 1995   | rock       | roc  | 0.94682
+D-A-D                | Blood In/Out                   | 1995   | electronic | roc  | 0.94531
+
+Stats for similarities:
+mean: 0.2099045217037201 std: 0.2784648537635803 p95: 0.6205866932868958 max: 0.9701764583587646
+Script execution took 1.36628 seconds
+```
+
+This set of recommendations contains a majority of rock/metal/grunge tracks from the 1990s, which fits the target track: Anti-Flag (punk rock), Smashing Pumpkins (alt rock), Dark Funeral (black metal), Ария (Russian heavy metal), Isengard (black metal), Abscess (death/doom), D-A-D (hard rock). Some outliers still creep in: Kitchens of Distinction – Cowboys and Aliens (dream pop / indie rock),  Happy Drivers – I Shot Da Sheriff (psychobilly/rockabilly). These are not perceptually close to the target, mostly because the genre classification of rock covers a wide spectrum and doesn't have enough granularity to differentiate between sonically different subgenres.
+
+
+We've seen that expanding the dataset size does produce better results but doesn't completely remove outliers. Next we'll focus on expanding the feature space (dimensionality). We'll start again from the sample dataset as a baseline and see how recommendation quality changes as the number of features increases. At the same time, we'll keep the decade and genre guardrails since we've already validated that they produce a significant increase in perceived quality.
+
+Sample output with 11 features (only single dimensional features, decade and genre filters)
+```
+Feature matrix stats:
+Number of unique tracks: 84850
+Number of unique feature vectors: 84833
+Number of near-zero columns: 0
+Total number of columns: 11
+Cosine similarity search took 0.00000 seconds, compared against 3,296/84,850
+Tracks similar to: Metallica - Enter Sandman (1991) [electronic] [roc] [62c2e20a-559e-422f-a44c-9afa7882f0c4]:
+
+Recommendations:
+Artist               | Title                          | Year   | Dort       | Rosa | Sim     | MBID
+---------------------------------------------------------------------------------------------------------
+Stabbing Westward    | Shame                          | 1996   | electronic | roc  | 0.99341 | d4016854-750b-4404-b146-e177ad083c67
+Mika Bomb            | Super Sexy Razor Happy Girls   | 1999   | electronic | roc  | 0.99152 | 08104eeb-51ce-4930-a24a-e7e9847af86a
+Bon Jovi             | Woman in Love                  | 1992   | electronic | roc  | 0.99108 | bed34077-0202-4ac7-8b24-5858e8de6b95
+Die Toten Hosen      | In Dulci Jubilo                | 1998   | electronic | roc  | 0.98887 | 9a32af1a-ba59-4a4e-b3a0-f05e2267306c
+Guns N' Roses        | Bad Obsession                  | 1991   | electronic | roc  | 0.98319 | 5c6d9c76-f9cd-4711-9c0a-a9f1c1c89c16
+Sonic Youth          | 100% (LP version)              | 1992   | rock       | roc  | 0.97900 | d4561919-ae4e-45a2-8014-4947f6766f61
+Die Toten Hosen      | König der Blinden              | 1999   | electronic | roc  | 0.97581 | 17eff1f4-1fc6-48e7-8641-ddffa8f3c67a
+Stabbing Westward    | I Don’t Believe                | 1996   | electronic | roc  | 0.97542 | 408f69a3-0e23-4c38-a8b6-2bf0868d6ece
+Melt-Banana          | Cannot                         | 1998   | rock       | roc  | 0.96966 | 9d0d7efa-d9ea-4313-a2de-e7c7f1f6fac2
+Guns N' Roses        | Don't Damn Me                  | 1991   | electronic | roc  | 0.96864 | 5c3198ad-c5d1-448d-8c86-866fa38808b7
+
+Stats for similarities:
+mean: 0.2587907016277313 std: 0.2640484869480133 p95: 0.636947751045227 max: 0.9934141635894775
+Script execution took 0.08100 seconds
+```
+
+Sample output with 16 features (added moods_mirex)
+```
+Feature matrix stats:
+Number of unique tracks: 84850
+Number of unique feature vectors: 84832
+Number of near-zero columns: 0
+Total number of columns: 16
+Cosine similarity search took 0.00100 seconds, compared against 3,296/84,850
+Tracks similar to: Metallica - Enter Sandman (1991) [electronic] [roc] [62c2e20a-559e-422f-a44c-9afa7882f0c4]:
+
+Recommendations:
+Artist               | Title                          | Year   | Dort       | Rosa | Sim
+--------------------------------------------------------------------------------------------
+Stabbing Westward    | Shame                          | 1996   | electronic | roc  | 0.99447
+Mika Bomb            | Super Sexy Razor Happy Girls   | 1999   | electronic | roc  | 0.99286
+Bon Jovi             | Woman in Love                  | 1992   | electronic | roc  | 0.99250
+Die Toten Hosen      | In Dulci Jubilo                | 1998   | electronic | roc  | 0.99059
+Guns N' Roses        | Bad Obsession                  | 1991   | electronic | roc  | 0.98587
+Sonic Youth          | 100% (LP version)              | 1992   | rock       | roc  | 0.98230
+Die Toten Hosen      | König der Blinden              | 1999   | electronic | roc  | 0.97967
+Stabbing Westward    | I Don’t Believe                | 1996   | electronic | roc  | 0.97924
+Guns N' Roses        | Don't Damn Me                  | 1991   | electronic | roc  | 0.97371
+Melt-Banana          | Cannot                         | 1998   | rock       | roc  | 0.97345
+
+Stats for similarities:
+mean: 0.2892068028450012 std: 0.27297839522361755 p95: 0.6601920127868652 max: 0.9944671392440796
+Script execution took 0.09200 seconds
+```
+
+Adding` moods_mirex` is a low-noise improvement, it strengthens cohesion without changing the flavor of the results.
+
+Sample with 36 features ("moods_mirex", "ismir04_rhythm", "genre_tzanetakis")
+```
+Feature matrix stats:
+Number of unique tracks: 84850
+Number of unique feature vectors: 84831
+Number of near-zero columns: 0
+Total number of columns: 36
+Cosine similarity search took 0.00100 seconds, compared against 3,296/84,850
+Tracks similar to: Metallica - Enter Sandman (1991) [electronic] [roc] [62c2e20a-559e-422f-a44c-9afa7882f0c4]:
+
+Recommendations:
+Artist               | Title                          | Year   | Dort       | Rosa | Sim
+--------------------------------------------------------------------------------------------
+Die Toten Hosen      | In Dulci Jubilo                | 1998   | electronic | roc  | 0.99537
+Stabbing Westward    | I Don’t Believe                | 1996   | electronic | roc  | 0.99151
+Die Toten Hosen      | Merry X‐Mas Everybody          | 1998   | electronic | roc  | 0.98532
+Guns N' Roses        | Don't Damn Me                  | 1991   | electronic | roc  | 0.98206
+Yo La Tengo          | Big Day Coming                 | 1993   | electronic | roc  | 0.97579
+Die Toten Hosen      | Entschuldigung, es tut uns lei | 1999   | electronic | roc  | 0.97465
+Queen                | The Hero                       | 1994   | electronic | roc  | 0.97354
+Die Toten Hosen      | Weihnachtsmann vom Dach        | 1998   | electronic | roc  | 0.97279
+Die Toten Hosen      | Unsterblich                    | 1999   | electronic | roc  | 0.97080
+Stabbing Westward    | Crushing Me                    | 1996   | electronic | roc  | 0.96807
+
+Stats for similarities:
+mean: 0.08835283666849136 std: 0.19821356236934662 p95: 0.2858421504497528 max: 0.9953653812408447
+Script execution took 0.12400 seconds
+```
+
+Adding the extra features leads to an over-representation of a single artist "Die Toten Hosen" in the results. They seem to inject more noise than signal, the reason is that:
+- `ismir04_rhythm` is too categorical being focused on ballroom dance styles and irrelevant outside of this domain area.
+- `genre_tzanetakis` is one of the oldest genre classifiers (2002) and mislabels rock/metal badly. The classifier tends to overpredict jazz, blues, and pop, and it’s weak at distinguishing subgenres of rock/metal.
+
+Among other features in the dataset that we could add, genre classifiers (Dortmund and Rosamerica) are better suited as guardrails rather than as features in the cosine similarity space. This is because categorical outputs don’t map well to an algorithm that works best with smooth, continuous values. If included directly, the results would collapse into clusters around broad genre centroids, which hides the finer musical differences that actually matter for recommendations. 
+
+Other features that can be left out:
+- `genre_electronic` it’s a very narrow classifier (ambient, dnb, house, techno, trance), could introduce noise, similar to other categorical features.
+- `gender` this just predicts whether the main vocal sounds male or female. That's not a strong driver of musical similarity.
+
+Finally, `moods_mirex`, although it also splits probabilities into multiple buckets like other classifiers (ismir04_rhythm, genre_tzanetakis), has two important advantages:
+
+- The buckets capture general perceptual characteristics that apply to any piece of music rather than genre-specific labels, so it doesn't introduce noise when applied outside a narrow domain.
+  - Cluster 1 – Passionate / Cheerful / Rowdy
+  - Cluster 2 – Poignant / Sad / Bittersweet
+  - Cluster 3 – Humorous / Silly / Witty
+  - Cluster 4 – Aggressive / Fiery / Intense
+  - Cluster 5 – Peaceful / Relaxed / Calming
+- The outputs are continuous rather than categorical: they’re not hard predictions but distributions that describe a track's mood profile. Probabilities are usually spread across several clusters, which creates smoother gradients of similarity instead of forcing tracks into one rigid bucket.
+
+With the features decided, this is the new output of the recommender for a dataset with 2M tracks:
+
+```
+Feature matrix stats:
+Number of unique tracks: 1117188
+Number of unique feature vectors: 1117016
+Number of near-zero columns: 0
+Total number of columns: 16
+Cosine similarity search took 0.00700 seconds, compared against 58,534/1,117,188
+Tracks similar to: Metallica - Enter Sandman (1991) [electronic] [roc] [62c2e20a-559e-422f-a44c-9afa7882f0c4]:
+
+Recommendations:
+Artist               | Title                          | Year   | Dort       | Rosa | Sim
+--------------------------------------------------------------------------------------------
+The Smashing Pumpkin | Appels + Oranjes               | 1998   | electronic | roc  | 0.96584
+Demoniac             | So Bar Gar                     | 1994   | rock       | roc  | 0.94603
+Isengard             | Total Death                    | 1995   | electronic | roc  | 0.94592
+Ария                 | Бесы                           | 1991   | electronic | roc  | 0.94585
+Kitchens of Distinct | Cowboys and Aliens             | 1994   | electronic | roc  | 0.94556
+Abscess              | Die Pig Die                    | 1995   | rock       | roc  | 0.94545
+D-A-D                | Blood In/Out                   | 1995   | electronic | roc  | 0.94457
+Dimple Minds         | Die Besten Trinken Aus         | 1993   | electronic | roc  | 0.94435
+Happy Drivers        | I Shot Da Sheriff (live)       | 1991   | electronic | roc  | 0.94406
+Comecon              | The Mule                       | 1992   | rock       | roc  | 0.94398
+
+Stats for similarities:
+mean: 0.2700285315513611 std: 0.30203670263290405 p95: 0.6666585803031921 max: 0.965840220451355
+Script execution took 1.38800 seconds
+```
+
+Comparing against the previous result for 2M datapoints (11 features) we can see a few meaningful changes. Outliers are still present but are ranked lower (Kitchens of Distinction, Happy Drivers) while the top spots are bands like Demoniac, Isengard, Ария, Abscess, all firmly in the heavy/black/death metal spectrum. That’s musically close to Metallica. The Smashing Pumpkins is not as heavy as Metallica but still musically related to rock.

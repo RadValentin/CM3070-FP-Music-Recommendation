@@ -90,7 +90,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         # json_paths = json_paths[0:1000] # use only a subset of the data, for debugging
         print(f"Will load {len(json_paths):,} records", end="", flush=True)
     else:
-        print(f"Will load records from archives", end="", flush=True)
+        print(f"Will load records from archives", flush=True)
 
     processing_counter = 0
     with ThreadPoolExecutor(max_workers=WORKERS) as executor:
@@ -145,6 +145,10 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     ]
     # Categorical fields for which we'll select the most common value between duplicates
     CAT_FIELDS = ["title", "genre_dortmund", "genre_rosamerica"]
+    VEC_FIELDS = [("moods_mirex", tph.MIREX_ORDER)]
+    VEC_FIELD_COLUMNS = [
+        f"{field}_{i+1}" for field, order in VEC_FIELDS for i in range(len(order))
+    ]
 
     for mbid, tracks in track_index.items():
         if not tracks:
@@ -163,6 +167,10 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         for field in CAT_FIELDS:
             values = [t.get(field) for t in tracks if t.get(field)]
             merged_track[field] = Counter(values).most_common(1)[0][0] if values else None
+
+        # VECTOR: average values
+        for field, order in VEC_FIELDS:
+            merged_track[field] = tph.merge_distribution(tracks, field)
 
         # TUPLES: pick most common
         try:
@@ -230,6 +238,11 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         # Store the track MBID + metadata + audio features, will be exported and used by recommendation
         # logic.
         track_features = [track.get(field) for field in FEATURE_FIELDS]
+        # Get vector features
+        vec_features = []
+        for field, order in VEC_FIELDS:
+            vec = track.get(field, [0.0]*len(order))
+            vec_features.extend(vec)
         track_features_list.append(
             [
                 track["musicbrainz_recordingid"],
@@ -238,6 +251,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
                 track["album_info"][2].year,  # release year
             ]
             + track_features
+            + vec_features
         )
     end = time.time()
 
@@ -291,19 +305,21 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     start = time.time()
     # Load the track audio features into a DataFrame and then export, keeping track
     # of how MBIS map to indexes in the feature matrix.
+    DF_FEATURE_FIELDS = FEATURE_FIELDS + VEC_FIELD_COLUMNS
+
     df = pd.DataFrame(
         track_features_list,
-        columns=["mbid", "genre_dortmund", "genre_rosamerica", "year", *FEATURE_FIELDS],
+        columns=["mbid", "genre_dortmund", "genre_rosamerica", "year", *DF_FEATURE_FIELDS],
     )
-    df[FEATURE_FIELDS] = df[FEATURE_FIELDS].astype(np.float32)
+    df[DF_FEATURE_FIELDS] = df[DF_FEATURE_FIELDS].astype(np.float32)
 
     # separate indexes from features
     # feature_ids = df["mbid"].to_numpy()
-    feature_matrix = df[FEATURE_FIELDS].to_numpy(dtype=np.float32)
+    feature_matrix_raw = df[DF_FEATURE_FIELDS].to_numpy(dtype=np.float32)
 
     # Scale values so they're more spread out, fixes skewed distribution
-    scaler = StandardScaler(with_mean=True, with_std=True).fit(feature_matrix)
-    feature_matrix_scaled = scaler.transform(feature_matrix).astype(np.float32)
+    scaler = StandardScaler(with_mean=True, with_std=True).fit(feature_matrix_raw)
+    feature_matrix_scaled = scaler.transform(feature_matrix_raw).astype(np.float32)
 
     # L2 normalize each row for cosine similarity later on
     feature_matrix_scaled /= (
@@ -315,6 +331,9 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         filename,
         # save vectors with values for audio features of tracks
         feature_matrix=feature_matrix_scaled,
+        # keep the raw matrix for future re-weighting experiments
+        feature_matrix_raw=feature_matrix_raw,
+        feature_names=np.array(DF_FEATURE_FIELDS, dtype=object),
         # save mapping from MusicBrainz ID to indexes in feature matrix
         mbids=df["mbid"].to_numpy(),
         years=df["year"].to_numpy(np.int16),

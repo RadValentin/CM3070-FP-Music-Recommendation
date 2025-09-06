@@ -40,18 +40,6 @@ class Track(models.Model):
     submissions = models.IntegerField()
     file_path = models.CharField(max_length=1024, null=True, blank=True)
     
-    # danceability = models.FloatField()
-    # aggressiveness = models.FloatField()
-    # happiness = models.FloatField()
-    # sadness = models.FloatField()
-    # relaxedness = models.FloatField()
-    # partyness = models.FloatField()
-    # acousticness = models.FloatField()
-    # electronicness = models.FloatField()
-    # instrumentalness = models.FloatField()
-    # tonality = models.FloatField()
-    # brightness = models.FloatField()
-    
     # class Meta:
     #     indexes = [
     #         models.Index(fields=['musicbrainz_recordingid']),
