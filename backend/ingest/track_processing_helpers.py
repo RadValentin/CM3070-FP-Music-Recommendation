@@ -23,6 +23,8 @@ def is_mbid(s: str) -> bool:
     Check if a string is a valid 36 character MBID
     Link: https://musicbrainz.org/doc/MusicBrainz_Identifier
     """
+    if not s:
+        return False
     return bool(MBID_REGEX.match(s))
 
 
@@ -96,7 +98,9 @@ def extract_artist_info(tags):
     """
     Returns a list of tuples (artist_id, artist_name)
     """
-    artist_ids = tags["musicbrainz_artistid"]
+    artist_ids = tags.get("musicbrainz_artistid", None)
+    if not artist_ids:
+        return []
 
     # Identify which key contains the artist name (might not all be present),
     # we also need to be able to match it to an id.
@@ -104,17 +108,18 @@ def extract_artist_info(tags):
         artist_key = "artist"
     elif "artists" in tags and len(artist_ids) == len(tags["artists"]):
         artist_key = "artists"
-    elif "albumartist" in tags and len(artist_ids) == len(tags["albumartist"]):
-        artist_key = "albumartist"
     else:
-        raise KeyError("No artist key found")
+        return []
+    
+    if len(artist_ids) != len(tags[artist_key]):
+        return []
 
     artists = []
     # Keep track of all artists inside an index
     for idx, artist_id in enumerate(artist_ids):
-        # Some tracks have artist ID given as "uuid1/uuid2", we don't need this level of detail
-        artist_id = re.split(r"[;/,\s]+", artist_id)[0]
-        artists.append((artist_id, tags[artist_key][idx]))
+        artist_id = artist_id.strip()
+        if is_mbid(artist_id):
+            artists.append((artist_id, tags[artist_key][idx]))
 
     return artists
 
@@ -124,13 +129,8 @@ def extract_album_info(tags):
     Returns a tuple (album_id, album_name, release_date)
     """
     global invalid_date_count
-    album_id = tags["musicbrainz_albumid"][0]
-    album_name = tags["album"][0]
-
-    if not album_id or not album_name:
-        raise ValueError(
-            f"Missing album info on track: {tags.get('artist', [None])[0]} - {tags.get('title', [None])[0]}, album id/name: {album_id}, {album_name}"
-        )
+    album_id = tags.get("musicbrainz_albumid", [None])[0]
+    album_name = tags.get("album", [None])[0]
 
     # Date parsing, look through multiple fields to increase chances of finding a valid date
     date = tags.get("date", [None])[0]
@@ -142,11 +142,11 @@ def extract_album_info(tags):
 
     if not release_date:
         invalid_date_count += 1
-        raise ValueError(
-            f"Missing or invalid date on track: {tags.get('artist', [None])[0]} - {tags.get('title', [None])[0]}, values: {date}, {originaldate}"
-        )
 
-    return (tags["musicbrainz_albumid"][0], tags["album"][0], release_date)
+    if not (album_id and is_mbid(album_id)) and not album_name and not release_date:
+        return None
+
+    return (album_id if is_mbid(album_id) else None, album_name, release_date)
 
 
 def extract_prob_vector(highlevel: dict, parent_key: str, order: list) -> list[float]:
@@ -177,6 +177,7 @@ def extract_data_from_json_str(json_str, file_path=None):
         data = orjson.loads(json_str)
     except json.JSONDecodeError:
         log(f"Bad JSON string")
+        missing_data_count += 1
         return None
 
     highlevel = data.get("highlevel") or {}
@@ -184,11 +185,13 @@ def extract_data_from_json_str(json_str, file_path=None):
     tags = metadata.get("tags") or {}
 
     try:
-        mbid = tags["musicbrainz_recordingid"][0]
-        if not is_mbid(mbid):
+        mbid = tags.get("musicbrainz_recordingid", [None])[0]
+        if not mbid:
+            raise ValueError(f"missing musicbrainz_recordingid")
+        elif not is_mbid(mbid):
             raise ValueError(f"bad MBID: {mbid}")
         
-        title = tags["title"][0]
+        title = tags.get("title", [None])[0]
         if not title:
             raise ValueError("missing title")
         

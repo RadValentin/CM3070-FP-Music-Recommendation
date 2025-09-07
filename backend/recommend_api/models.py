@@ -10,7 +10,7 @@ class Album(models.Model):
     musicbrainz_albumid = models.CharField(primary_key=True, max_length=36) 
     name = models.CharField(max_length=255)
     artists = models.ManyToManyField(Artist, through='AlbumArtist')    
-    date = models.DateField()
+    date = models.DateField(null=True, blank=True)
     #label = models.CharField(max_length=255)
     #asin = models.CharField(max_length=255) # Amazon product code
     #barcode = models.CharField(max_length=255) # album barcode

@@ -1,4 +1,5 @@
 from django.test import TestCase
+from datetime import date
 import ingest.track_processing_helpers as tph
 import orjson
 
@@ -70,15 +71,21 @@ class ExtractDataFromJsonStrTests(TestCase):
         data["metadata"]["tags"]["originaldate"] = ["0000-00-00"]
         modified_json = orjson.dumps(data)
         result = tph.extract_data_from_json_str(modified_json)
-        self.assertIsNone(result)
+        self.assertEqual(
+            result["album_info"],
+            ("11223344-5566-7788-99aa-bbccddeeff00", "Test Album", None),
+        )
 
     def test_empty_album(self):
         data = orjson.loads(self.valid_json)
-        data["metadata"]["tags"]["album"] = [""]
+        del data["metadata"]["tags"]["album"]
         modified_json = orjson.dumps(data)
         result = tph.extract_data_from_json_str(modified_json)
-        self.assertIsNone(result)
-    
+        self.assertEqual(
+            result["album_info"],
+            ("11223344-5566-7788-99aa-bbccddeeff00", None, date(2005,7,14)),
+        )
+
     def test_empty_title(self):
         data = orjson.loads(self.valid_json)
         data["metadata"]["tags"]["title"] = [""]

@@ -70,6 +70,15 @@
   - Inside each thread, the archive is decompressed and its contained JSON files are streamed and processed sequentially (relevant data is extracted from JSON files)
   - As each future completes, it creates a list of processed tracks which can be further processed in subsequent phases of the pipeline
 - Streaming the data removes the need to unzip the archives manually. We also don't need to worry about file access bottlenecks and don't need to merge the millions of JSON files into NDJSONs.
+### 06 September
+- Include `moods_mirex` as an audio feature, increasing feature space to 16, document improvement in recommendation rankings
+- Converted artist info and album info fields on tracks from required to optional during data ingest. This means fewer tracks will get dropped from the DB because of missing information. We can rely on merging duplicates to fill-in artist data and drop tracks that don't have an associated artist after merge.
+### 07 September
+- Make album dates optional, the album name can still be recorded in DB even without a release date. Tracks in the feature matrix can have year=0.
+- If an artist shows up under different names for the same id, merge the names by selecting the most common one, should help deal with mislabelled artists
+- Generate charts with genre distributions based on feature matrix, useful for report later on
+- Experiment with recommendation logic and describe choice of which features to use in report
+- Test out re-ranking recommended songs based on popularity (`submissions` count)
 
 
 ## Final Stretch Plan

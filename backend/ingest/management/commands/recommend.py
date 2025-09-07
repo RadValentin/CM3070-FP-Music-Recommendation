@@ -1,4 +1,5 @@
 import io, sys, time
+import numpy as np, math
 from django.core.management.base import BaseCommand, CommandError
 from recommend_api.models import Track
 import recommend_api.recommender as rec
@@ -42,7 +43,7 @@ def generate_recommendations(target_mbid: str):
     print(f'Total number of columns: {feature_stats["total_col_count"]}')
 
     # Display recommendations
-    recommendations = rec.recommend(target_mbid, 50, True)
+    recommendations = rec.recommend(target_mbid, 1000, True)
     target_year = recommendations["target_year"]
     target_genre_dortmund = recommendations["target_genre_dortmund"]
     target_genre_rosamerica = recommendations["target_genre_rosamerica"]
@@ -62,50 +63,67 @@ def generate_recommendations(target_mbid: str):
         ).prefetch_related("artists")
     }
 
+    # fetch popularity for the current top results
+    subs_qs = Track.objects.filter(
+        musicbrainz_recordingid__in=top_mbids
+    ).values("musicbrainz_recordingid", "submissions")
+    subs_map = {r["musicbrainz_recordingid"]: r["submissions"] or 0 for r in subs_qs}
+
+    # add popularity and combined score
+    for t in top_tracks:
+        pop = subs_map.get(t["mbid"], 0)
+        t["popularity"] = pop
+        # simple blend: mostly similarity, small nudge from popularity
+        t["final_score"] = 0.9 * t["similarity"] + 0.1 * math.log1p(pop)
+
+    # rerank by final score
+    top_tracks.sort(key=lambda x: x["final_score"], reverse=True)
+
     print(
         f"Tracks similar to: {target_artist.name} - {target_track.title} ({target_year}) [{target_genre_dortmund}] [{target_genre_rosamerica}] [{target_mbid}]:"
     )
 
     print("\nRecommendations:")
-    header = f"{'Artist':20} | {'Title':30} | {'Year':6} | {'Dort':10} | {'Rosa':4} | {'Sim':7}"
+    header = f"{'Artist':20} | {'Title':30} | {'Year':6} | {'Dort':10} | {'Rosa':4} | {'Sim':7} | {'Subs':3} | {'Score':3}"
     print(header)
     print("-" * len(header))
 
     # Display the tracks in order by going through top_mbids list and extracting track data from a dict.
-    result_counter = 0
+    seen_artists = set()
+    unique_tracks = []
     for track in top_tracks:
         track_obj = track_map.get(track["mbid"])
         artist = track_obj.artists.first()
         artist_name = artist.name if artist else "Unknown Artist"
 
-        if result_counter >= 10:
+        if len(unique_tracks) >= 10:
             break
+        elif artist in seen_artists:
+            continue  # skip duplicates
         elif track["mbid"] == target_mbid:
             # Skip is target track is encountered again somehow
             continue
         elif artist_name == target_artist.name and track_obj.title == target_track.title:
             # Skip if it's the same song by the same artist as the target track
             continue
-        else:
-            result_counter += 1
+
+        seen_artists.add(artist)
+        unique_tracks.append(track)
+        pop = subs_map.get(track["mbid"], 0)
 
         print(
             f'{artist_name[:20]:20} | {track_obj.title[:30]:30} | {str(track["year"]):6} | '
-            f'{track["genre_dortmund"]:10} | {track["genre_rosamerica"]:4} | {track["similarity"]:6.5f}'
+            f'{track["genre_dortmund"]:10} | {track["genre_rosamerica"]:4} | {track["similarity"]:6.5f} | {track["popularity"]} | {track["mbid"]}'
         )
 
+
+    top_tracks = unique_tracks
     # Print statistics
     print("\nStats for similarities:")
-    print(
-        "mean:",
-        stats["mean"],
-        "std:",
-        stats["std"],
-        "p95:",
-        stats["p95"],
-        "max:",
-        stats["max"],
-    )
+    print("mean:",stats["mean"],
+          "std:",stats["std"],
+          "p95:",stats["p95"],
+          "max:",stats["max"])
 
     end = time.time()
     print(f"Script execution took {end - start:.5f} seconds")

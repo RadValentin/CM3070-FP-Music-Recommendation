@@ -107,7 +107,32 @@ The pitfalls of user-generated data:
 
 ### Building the database
 
-## Merging the JSON files
+#### What to extract from the JSON files
+
+In order for a JSON file to be processed it must contain certain bits of information in it which are essential for making recommendations:
+- MusicBrainz ID (`musicbrainz_recordingid`) - required as a means to identify the track, duplicate tracks are grouped by this ID for merging
+- Title - required for humans to easily identify the track, without it we'd have to backfill this information by ingesting another dataset (MusicBrainz metadata). If a track appears under multiple titles, we select the most common one.
+- Artist - similar to title but merging is more complex a track can have multiple artists. We'll merge by selecting the most common combination of artists. A track is dropped if after duplicates are merged it still doesn't have an associated artist.
+- Audio features (`danceability`, `aggressiveness`, `happiness`, etc.) - the basis of which recommendations are made, if a track has duplicates then they are merged by selecting the median (middle) value.
+- Genre (`genre_dortmund`, `genre_rosamerica`) - can also be used to match similar songs, duplicates are merged by selecting the most common value so one bad categorization doesn't mislabel a track.
+- Album - optional but nice for display, duplicates are still merged by selecting the most common, not-none, pair of (`album_id`, `album_name`, `release_date`).
+- Year - semi-optional, it's extracted from the album release year but there's no album info then the year is set to 0
+
+For 100k records:
+- 11,182 duplicate submissions
+- 4 submissions with missing data (doesn't have one of the required fields, except artist)
+- 3,082 tracks with no artist (determined after merging duplicates)
+- 85,732 records are valid and can be saved
+- 1,319 of the valid records have missing release years
+
+Note: By merging duplicates I'm able to fill-in missing information in the dataset, increasing the chances of having a representative single-entry for each track. However this comes with the assumption that most duplicates are correct and outliers are rare.
+
+##### How dates are stored
+- In the SQLite DB dates (`date`, `originaldate`) are stored for albums, not tracks. This data was retrieved initially from MusicBrainz metadata and it represents album-level information (when the album, not the track was released).
+- In the feature matrix (`features_and_index.npz`) dates are stored for each track based on when the track's album was released. This was needed in order to match tracks based on when they were release without needing to query the DB.
+
+
+#### (DROP) Merging the JSON files
 
 Merging multiple JSON files into one NDJSON. This is done to reduce the number of individual file reads needed to build the database. In theory it should be much faster to read JSON data sequentially from a single location than when split across millions of tiny files.
 ```bash
@@ -135,7 +160,7 @@ Measure-Command {
 ```
 Merge of 100k records takes 14min 36s (876s). This is even slower than through WSL. 
 
-## Recommendation logic
+#### Recommendation logic
 
 For making the recommendations we'll use the following approach:
 - Extract metadata from the dataset to a database: track title, artist, album, genre, release year

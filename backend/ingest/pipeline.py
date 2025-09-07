@@ -1,11 +1,11 @@
 # Data Processing for Music Recommendation System
-import io, os, sys, time
+import io, os, sys, time, gc
 import numpy as np
 import pandas as pd
 from . import track_processing_helpers as tph
 from dotenv import dotenv_values
 from typing import Optional
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 from sklearn.preprocessing import StandardScaler
 from concurrent.futures import ThreadPoolExecutor
@@ -21,6 +21,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     config = dotenv_values(BASE_DIR / ".env")
     # globals used to track how many records are skipped while processing
     duplicate_count = 0
+    missing_artist_count = 0
     tph.mute_logs = not show_log
 
     ## NOTE: Phase 1 - Load JSON data about tracks into memory
@@ -52,13 +53,6 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         archive_paths = [archive_paths[i] for i in parts_list]
     elif num_parts and len(archive_paths):
         archive_paths = archive_paths[:num_parts]    
-
-    album_index = {}  # keep track of unique album names, indexed by MBID
-    artist_index = {}  # keep track of unique artist names, indexed by MBID
-    track_index = {}  # keep track of unique track data, indexed by MBID
-    trackartist_set = set() # set of all Track-Artist M2M pairings, to avoid duplication
-    albumartist_set = set()  # set of all Album-Artist M2M pairings
-    track_features_list = []  # list of feature values for each track
 
     start = time.time()
 
@@ -92,6 +86,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     else:
         print(f"Will load records from archives", flush=True)
 
+    track_index = {}  # keep track of unique track data, indexed by MBID
     processing_counter = 0
     with ThreadPoolExecutor(max_workers=WORKERS) as executor:
         # Process file-by-file (individual JSONs)
@@ -177,9 +172,11 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
             merged_track["artist_pairs"] = tph.merge_artist_pairs(tracks)
             merged_track["album_info"] = tph.merge_album_info(tracks)
         except Exception as e:
-            print(e, base_track, base_track["file_path"])
-            err_paths = [track["file_path"] for track in tracks]
-            print(err_paths)
+            tph.log(f"{e} {base_track['file_path']}")
+
+        if not merged_track["artist_pairs"]:
+            missing_artist_count += 1
+            continue
 
         # Use values from the base track + values selected by most common
         merged_track = base_track | merged_track
@@ -187,12 +184,18 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         merged_tracks[mbid] = merged_track
 
     track_index = merged_tracks
-
+    del merged_tracks
+    gc.collect()
     
     ## NOTE: Phase 3 - Build the DB models
 
     print("Will build DB models.")
 
+    album_index = {}  # keep track of unique album names, indexed by MBID
+    artist_index = defaultdict(list)  # keep track of unique artist names, indexed by MBID
+    trackartist_set = set() # set of all Track-Artist M2M pairings, to avoid duplication
+    albumartist_set = set()  # set of all Album-Artist M2M pairings
+    track_features_list = []  # list of feature values for each track
     track_list = []
     FEATURE_FIELDS = [
         "danceability", "aggressiveness", "happiness", "sadness", "relaxedness", "partyness", 
@@ -214,12 +217,10 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         )
         track_list.append(track_obj)
 
+        # Associate artists, albums and tracks
         for artist_id, artist_name in artist_pairs:
             # Store artist data in a separate hashmap and associate it with the track
-            if artist_id not in artist_index or artist_index[artist_id] is None:
-                artist_index[artist_id] = Artist(
-                    musicbrainz_artistid=artist_id, name=artist_name
-                )
+            artist_index[artist_id].append(artist_name)
             trackartist_set.add((track_id, artist_id))
 
             # Associate track with album, album with artist
@@ -227,13 +228,17 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
                 continue
             album_id, album_name, date = album_info
 
-            if album_id not in album_index or album_index[album_id] is None:
-                album_index[album_id] = Album(
-                    musicbrainz_albumid=album_id, name=album_name, date=date
-                )
+            # create Album object only if we have BOTH id and name
+            if (album_id and album_name):
+                if (album_id not in album_index) or (album_index[album_id] is None):
+                    album_index[album_id] = Album(
+                        musicbrainz_albumid=album_id, name=album_name, date=date
+                    )
 
-            track_obj.album = album_index[album_id]
-            albumartist_set.add((album_id, artist_id))
+                # Link track to album
+                track_obj.album = album_index[album_id]
+                # Link album to artist
+                albumartist_set.add((album_id, artist_id))
 
         # Store the track MBID + metadata + audio features, will be exported and used by recommendation
         # logic.
@@ -243,16 +248,27 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         for field, order in VEC_FIELDS:
             vec = track.get(field, [0.0]*len(order))
             vec_features.extend(vec)
+
+        # If a track doesn't have album info (thus missing release year), default the year to 0
+        year = 0
+        if album_info and len(album_info) >= 3 and album_info[2]:
+            try:
+                year = album_info[2].year
+            except Exception:
+                year = 0
+
         track_features_list.append(
             [
                 track["musicbrainz_recordingid"],
                 track["genre_dortmund"],
                 track["genre_rosamerica"],
-                track["album_info"][2].year,  # release year
+                year # release year
             ]
             + track_features
             + vec_features
         )
+    del track_index
+    gc.collect()
     end = time.time()
 
     print(
@@ -261,10 +277,21 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     print(f"Found {duplicate_count:,} duplicate submissions.")
     print(f"Found {tph.invalid_date_count:,} submissions with invalid dates.")
     print(f"Found {tph.missing_data_count:,} submissions with missing data.")
+    print(f"Dropped {missing_artist_count:,} tracks with no artist.")
+    zero_year_count = sum(row[3] == 0 for row in track_features_list)
+    print(f"Tracks with year=0: {zero_year_count} / {len(track_features_list)}")
 
     start = time.time()
+    # For artists that appear under different names, merge by selecting most common one
+    merged_artist_index = {}
+    for artist_id, artist_names in artist_index.items():
+        merged_name = Counter(artist_names).most_common(1)[0][0]
+        merged_artist_index[artist_id] = Artist(
+            musicbrainz_artistid=artist_id, name=merged_name
+        )
+
     Album.objects.bulk_create(album_index.values())
-    Artist.objects.bulk_create(artist_index.values())
+    Artist.objects.bulk_create(merged_artist_index.values())
     end = time.time()
     print(f"Inserted artists and albums in {end - start:.2f} seconds")
 
@@ -284,20 +311,21 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     trackartist_list = []
     for track_id, artist_id in trackartist_set:
         trackartist_list.append(
-            TrackArtist(artist=artist_index[artist_id], track_id=track_id)
+            TrackArtist(artist=merged_artist_index[artist_id], track_id=track_id)
         )
     TrackArtist.objects.bulk_create(trackartist_list)
 
     albumartist_list = []
     for album_id, artist_id in albumartist_set:
+        album = album_index.get(album_id)
+        if not album:
+            continue
         albumartist_list.append(
-            AlbumArtist(artist=artist_index[artist_id], album=album_index[album_id])
+            AlbumArtist(artist=merged_artist_index[artist_id], album=album)
         )
     AlbumArtist.objects.bulk_create(albumartist_list)
     end = time.time()
-    print(
-        f"Inserted M2M pairings for TrackArtist and AlbumArtist in {end - start:.2f} seconds"
-    )
+    print(f"Inserted M2M pairings for TrackArtist and AlbumArtist in {end - start:.2f} seconds")
 
     
     ## NOTE: Phase 4 - Save data about audio features into vector files
