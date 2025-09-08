@@ -107,6 +107,19 @@ The pitfalls of user-generated data:
 
 ### Building the database
 
+```sql
+--Optional commands if DB/USER were created previously
+--REVOKE ALL ON SCHEMA public FROM django;
+--DROP DATABASE IF EXISTS taste_mender_db;
+--DROP USER IF EXISTS django;
+CREATE USER django WITH PASSWORD 'password';
+CREATE DATABASE taste_mender_db WITH ENCODING 'UTF8' OWNER django;
+GRANT ALL PRIVILEGES ON DATABASE taste_mender_db TO django;
+GRANT ALL PRIVILEGES ON SCHEMA public TO django;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO django;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO django;
+```
+
 #### What to extract from the JSON files
 
 In order for a JSON file to be processed it must contain certain bits of information in it which are essential for making recommendations:
