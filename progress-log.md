@@ -79,6 +79,14 @@
 - Generate charts with genre distributions based on feature matrix, useful for report later on
 - Experiment with recommendation logic and describe choice of which features to use in report
 - Test out re-ranking recommended songs based on popularity (`submissions` count)
+### 08 September
+- Switched DB from SQLite to PostgreSQL
+  - Query speed significantly faster, from 15s to 0.007s for a 4-table inner join with string matching in DBeaver (5M tracks dataset, 2M rows in DB after merging duplicated). This is great for quickly checking the DB during development.
+  - Postgres provides extra features like trigram matching for strings which will be required for search.
+- Saw an increase in data ingest script execution times, perf tweaks were applied, afterwards times are back to normal
+  - Increasing batch size for `bulk_create` from 2K to 20K
+  - Wrap DB inserts in `transaction.atomic()`
+  - Set `synchronous_commit` off
 
 
 ## Final Stretch Plan

@@ -1,18 +1,15 @@
 # Data Processing for Music Recommendation System
-import io, os, sys, time, gc
+import os, time, gc
 import numpy as np
 import pandas as pd
 from . import track_processing_helpers as tph
-from dotenv import dotenv_values
-from typing import Optional
 from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor
+from django.db import transaction, connection
+from dotenv import dotenv_values
 from pathlib import Path
 from sklearn.preprocessing import StandardScaler
-from concurrent.futures import ThreadPoolExecutor
 from recommend_api.models import Track, Artist, TrackArtist, Album, AlbumArtist
-
-# Ensure print output is UTF-8 formatted so it can be logged to a file
-# sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 
 def build_database(use_sample: bool, show_log: bool, num_parts: int = None, parts_list: list = None):
@@ -42,7 +39,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     Track.objects.all().delete()
     Artist.objects.all().delete()
 
-    # If the user downloaded the AB dataset parts archives then store a list of the files, 
+    # If the user downloaded the AB dataset parts archives then store a list of the files,
     # we'll check and process later on, restrict based on param.
     archive_paths = [
         os.path.join(dataset_path, fname)
@@ -124,7 +121,6 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
                     print(".", end="", flush=True)
         print("", flush=True)
 
-    
     ## NOTE: Phase 2 - Merge duplicate entries for tracks by selecting the most common value for each field
     ## The goal is to have the most representative values for each feature among the duplicates of a track.
 
@@ -186,7 +182,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     track_index = merged_tracks
     del merged_tracks
     gc.collect()
-    
+
     ## NOTE: Phase 3 - Build the DB models
 
     print("Will build DB models.")
@@ -281,54 +277,66 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     zero_year_count = sum(row[3] == 0 for row in track_features_list)
     print(f"Tracks with year=0: {zero_year_count} / {len(track_features_list)}")
 
-    start = time.time()
-    # For artists that appear under different names, merge by selecting most common one
-    merged_artist_index = {}
-    for artist_id, artist_names in artist_index.items():
-        merged_name = Counter(artist_names).most_common(1)[0][0]
-        merged_artist_index[artist_id] = Artist(
-            musicbrainz_artistid=artist_id, name=merged_name
-        )
+    ## NOTE: Phase 4 - Insert data into DB
 
-    Album.objects.bulk_create(album_index.values())
-    Artist.objects.bulk_create(merged_artist_index.values())
-    end = time.time()
-    print(f"Inserted artists and albums in {end - start:.2f} seconds")
+    with transaction.atomic():
+        with connection.cursor() as c:
+            c.execute("SET LOCAL synchronous_commit = OFF;")
 
-    start = time.time()
-    batch_size = 2000
-    print("Will insert records in DB", end="", flush=True)
+        start = time.time()
+        BATCH_SIZE = 20000
 
-    for i in range(0, len(track_list), batch_size):
-        Track.objects.bulk_create(track_list[i : i + batch_size])
-        print(".", end="", flush=True)
+        # For artists that appear under different names, merge by selecting most common one
+        merged_artist_index = {}
+        for artist_id, artist_names in artist_index.items():
+            merged_name = Counter(artist_names).most_common(1)[0][0]
+            merged_artist_index[artist_id] = Artist(
+                musicbrainz_artistid=artist_id, name=merged_name
+            )
+        Album.objects.bulk_create(album_index.values(), batch_size=BATCH_SIZE)
+        Artist.objects.bulk_create(merged_artist_index.values(), batch_size=BATCH_SIZE)
+        end = time.time()
+        print(f"Inserted artists and albums in {end - start:.2f} seconds")
 
-    end = time.time()
-    print(f"\nInserted {len(track_list)} records in {end - start:.2f} seconds")
+        start = time.time()
+        print("Will insert records in DB", end="", flush=True)
 
-    start = time.time()
-    # M2M pairing were stored as sets to avoid duplication, convert them to lists and create objects.
-    trackartist_list = []
-    for track_id, artist_id in trackartist_set:
-        trackartist_list.append(
-            TrackArtist(artist=merged_artist_index[artist_id], track_id=track_id)
-        )
-    TrackArtist.objects.bulk_create(trackartist_list)
+        for i in range(0, len(track_list), BATCH_SIZE):
+            Track.objects.bulk_create(
+                track_list[i : i + BATCH_SIZE], batch_size=BATCH_SIZE
+            )
+            print(".", end="", flush=True)
 
-    albumartist_list = []
-    for album_id, artist_id in albumartist_set:
-        album = album_index.get(album_id)
-        if not album:
-            continue
-        albumartist_list.append(
-            AlbumArtist(artist=merged_artist_index[artist_id], album=album)
-        )
-    AlbumArtist.objects.bulk_create(albumartist_list)
-    end = time.time()
-    print(f"Inserted M2M pairings for TrackArtist and AlbumArtist in {end - start:.2f} seconds")
+        end = time.time()
+        print(f"\nInserted {len(track_list)} records in {end - start:.2f} seconds")
 
-    
-    ## NOTE: Phase 4 - Save data about audio features into vector files
+        start = time.time()
+        # M2M pairing were stored as sets to avoid duplication, convert them to lists and create objects.
+        trackartist_list = []
+        for track_id, artist_id in trackartist_set:
+            trackartist_list.append(
+                TrackArtist(artist=merged_artist_index[artist_id], track_id=track_id)
+            )
+
+        albumartist_list = []
+        for album_id, artist_id in albumartist_set:
+            album = album_index.get(album_id)
+            if not album:
+                continue
+            albumartist_list.append(
+                AlbumArtist(artist=merged_artist_index[artist_id], album=album)
+            )
+
+        for i in range(0, len(trackartist_list), BATCH_SIZE):
+            TrackArtist.objects.bulk_create(trackartist_list[i:i+BATCH_SIZE], batch_size=BATCH_SIZE)
+
+        for i in range(0, len(albumartist_list), BATCH_SIZE):
+            AlbumArtist.objects.bulk_create(albumartist_list[i:i+BATCH_SIZE], batch_size=BATCH_SIZE)
+
+        end = time.time()
+        print(f"Inserted M2M pairings for TrackArtist and AlbumArtist in {end - start:.2f} seconds")
+
+    ## NOTE: Phase 5 - Save data about audio features into vector files
 
     start = time.time()
     # Load the track audio features into a DataFrame and then export, keeping track

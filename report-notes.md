@@ -118,6 +118,9 @@ GRANT ALL PRIVILEGES ON DATABASE taste_mender_db TO django;
 GRANT ALL PRIVILEGES ON SCHEMA public TO django;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO django;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO django;
+
+-- Needed for creating a DB when running tests
+ALTER USER django CREATEDB;
 ```
 
 #### What to extract from the JSON files
@@ -441,3 +444,11 @@ Script execution took 1.38800 seconds
 ```
 
 Comparing against the previous result for 2M datapoints (11 features) we can see a few meaningful changes. Outliers are still present but are ranked lower (Kitchens of Distinction, Happy Drivers) while the top spots are bands like Demoniac, Isengard, Ария, Abscess, all firmly in the heavy/black/death metal spectrum. That’s musically close to Metallica. The Smashing Pumpkins is not as heavy as Metallica but still musically related to rock.
+
+### API
+
+#### Search
+
+**Trigram search** is a method of searching text by comparing how many 3 consecutive letter substrings (trigrams) are common between a query and the target text. Two strings with many common trigrams are considered to be very similar. For example, from the string "Alice" we can create 3 trigrams: "ali", "lic", and "ice".
+
+PostgreSQL natively supports this method of search through its [`pg_trgm` extension](https://www.postgresql.org/docs/current/pgtrgm.html) which must first be enabled: ``

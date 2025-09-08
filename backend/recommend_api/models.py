@@ -11,14 +11,6 @@ class Album(models.Model):
     name = models.CharField(max_length=255)
     artists = models.ManyToManyField(Artist, through='AlbumArtist')    
     date = models.DateField(null=True, blank=True)
-    #label = models.CharField(max_length=255)
-    #asin = models.CharField(max_length=255) # Amazon product code
-    #barcode = models.CharField(max_length=255) # album barcode
-   
-    # class Meta:
-    #     indexes = [
-    #         models.Index(fields=['date'])
-    #     ]
 
 
 class AlbumArtist(models.Model):
@@ -29,23 +21,17 @@ class AlbumArtist(models.Model):
     class Meta:
         unique_together = [('artist', 'album')]
 
+
 class Track(models.Model):
     musicbrainz_recordingid = models.CharField(primary_key=True, max_length=36)
     album = models.ForeignKey(Album, on_delete=models.CASCADE, null=True, blank=True)
-    artists = models.ManyToManyField(Artist, through='TrackArtist', related_name='artists')
-    title = models.CharField(max_length=255)
+    artists = models.ManyToManyField(Artist, through='TrackArtist', related_name='tracks')
+    title = models.TextField()
     duration = models.FloatField()
     genre_dortmund = models.CharField(max_length=255)
     genre_rosamerica = models.CharField(max_length=255)
     submissions = models.IntegerField()
     file_path = models.CharField(max_length=1024, null=True, blank=True)
-    
-    # class Meta:
-    #     indexes = [
-    #         models.Index(fields=['musicbrainz_recordingid']),
-    #         models.Index(fields=['genre_rosamerica']),
-    #         models.Index(fields=['genre_dortmund'])
-    #     ]
      
 
 class TrackArtist(models.Model):
