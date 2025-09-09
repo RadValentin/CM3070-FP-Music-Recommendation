@@ -68,6 +68,29 @@ Other potential data sources:
   - > Most online databases provide metadata but not audio features
 
 ## Development
+
+### Prototype App
+
+As a placeholder for the final dataset, I used the ["Spotify Million Song Dataset"](https://www.kaggle.com/datasets/notshrirang/spotify-million-song-dataset) licensed under [CC0: Public Domain](https://creativecommons.org/publicdomain/zero/1.0/) from Kaggle.
+
+Prototype user flow:
+- User finds the song he likes using the front-end
+  - Back-end should support searching for songs by title, returning matches with their IDs
+- Dataset is loaded, a machine learning model is trained on it
+
+For 57650 songs it takes 2,85 GB of disk space to store their associated TF-IDF vectors. This is a noticeable increase in storage requirements as the lyrics themselves only take up 71 MB.
+
+Some insights on the vectors themselves:
+- Each has a 10k features upper bound
+- They're sparsely populated, most values being zero
+- They're stored in the DB as raw JSON which will involve some overhead when accessing and processing them
+- Saving the data to the DB takes around 10 minutes
+
+Similar songs can be identified by calculating the cosine similarity between the original song's and all other songs TF-IDF vectors. The songs with the highest values (between -1 and 1) will also be closest in terms of their lyrical content.
+
+In order to increase performance I decided to store the vectors as a separate file instead and only keep the song metadata in the DB.
+
+### Takeaways from prototype
 The prototype revealed that relational databases, while optimal for storing track metadata, aren't suitable for storing audio features. The features are usually in the form of vectors and most database systems don't offer support for such a datatype. Having to serialize vectors to strings for storage would significantly bottleneck database operations, the same goes for deserializing the data when it needs to be used in code. A vector DB/index is needed instead: FAISS, Annoy, ScaNN.
 
 Another thing to consider is the complexity of making recommendations. For each song we'd have to compare against every other song to determine similarity which is a $O(N^2)$ problem. For a million records that would require the same number of DB requests to run the comparisons.

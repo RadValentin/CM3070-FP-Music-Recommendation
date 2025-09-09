@@ -28,7 +28,7 @@
 - [x] `GET /api/v1/tracks/<mbid>/features/` - show audio features from feature matrix for a track
 - [ ] `POST /api/v1/recommend/`
 **Request**
-```json
+```js
 {
   // listened previously
   "recent_track_ids": ["mbid","mbid","mbid"],

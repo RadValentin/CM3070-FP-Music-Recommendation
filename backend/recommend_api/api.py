@@ -159,7 +159,7 @@ class RecommendView(APIView):
             t.musicbrainz_recordingid: t
             for t in Track.objects.filter(
                 musicbrainz_recordingid__in=top_mbids
-            ).prefetch_related("artists")
+            ).select_related("album").prefetch_related("artists")
         }
 
         # Go through the similar tracks and extract a subset by filtering for
