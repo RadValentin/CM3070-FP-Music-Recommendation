@@ -91,8 +91,19 @@
 - Design API
 - Rework earlier API implementation, add endpoints:
   - `GET /api/v1/tracks|albums|artists/` - list and details for DB models
-  - `POST /api/v1/recommend` - post with MBID to get recommendations for similar songs
+    - `GET /api/v1/tracks/<mbid>/features/` - returns audio feature values (raw and scaled) from feature matrix
+    - `GET /api/v1/albums/<mbid>/art/` - redirects to https://coverartarchive.org/ for cover art
+    - `GET /api/v1/artists/<mbid>/tracks/` - all tracks by artist
+    - `GET /api/v1/artists/<mbid>/top_tracks/` - top tracks by artist
+    - `GET /api/v1/artists/<mbid>/albums/` - all albums artist is on
+  - `POST /api/v1/recommend/` - post with MBID to get recommendations for similar songs
+  - `GET /api/v1/genres/` - show all possible genre tags in DB
+
+### TODO: 10 September
 - Implement search endpoint - trigram similarity, ViewSet
+- Refine recommend endpoint
+- Implement `GET /api/v1/artists/<mbid>/similar-artists/`
+- Implement `GET /api/v1/tracks/<mbid>/sources/`
 
 ## Final Stretch Plan
 

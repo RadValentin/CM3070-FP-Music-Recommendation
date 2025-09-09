@@ -1,31 +1,31 @@
 ## Browse
 
-- [ ] `GET /api/v1/` - show available endpoints
-- [ ] `GET /api/v1/tracks/` - list all tracks (paginated)
-- [ ] `GET /api/v1/tracks/<mbid>/` - track details
-- [ ] `GET /api/v1/artists/` - list all artists (paginated)
-- [ ] `GET /api/v1/artists/<mbid>/` - artist details
-- [ ] `GET /api/v1/artists/<mbid>/tracks/` - all tracks by artist (paginated)
-- [ ] `GET /api/v1/artists/<mbid>/top-tracks/?limit=<k>` - top k tracks
-- [ ] `GET /api/v1/artists/<mbid>/albums/` - albums by artist, sort by release date
-- [ ] `GET /api/v1/albums/` - list all albums (paginated)
-- [ ] `GET /api/v1/albums/<mbid>/` - album details
-- [ ] `GET /api/v1/albums/<mbid>/art/`
+- [x] `GET /api/v1/` - show available endpoints
+- [x] `GET /api/v1/tracks/` - list all tracks (paginated)
+- [x] `GET /api/v1/tracks/<mbid>/` - track details
+- [x] `GET /api/v1/artists/` - list all artists (paginated)
+- [x] `GET /api/v1/artists/<mbid>/` - artist details
+- [x] `GET /api/v1/artists/<mbid>/tracks/` - all tracks by artist (paginated)
+- [x] `GET /api/v1/artists/<mbid>/top-tracks/` - top tracks by artist (paginated)
+- [x] `GET /api/v1/artists/<mbid>/albums/` - albums by artist, sort by release date
+- [x] `GET /api/v1/albums/` - list all albums (paginated)
+- [x] `GET /api/v1/albums/<mbid>/` - album details
+- [x] `GET /api/v1/albums/<mbid>/art/`
   - Return album cover art from Cover Art Archive (CAA) <br/>
   https://coverartarchive.org/release/{MBID}/front <br/>
   https://coverartarchive.org/release-group/{MBID}/front <br/>
-- [ ] `GET /api/v1/genres/` - list all unique genre names in Rosamerica and Dortmund classifications
+- [x] `GET /api/v1/genres/` - list all unique genre names in Rosamerica and Dortmund classifications
 - [ ] Use caching for static resources (tracks, albums, artists, features): `ETag` and `Cache-Control`.
-- [ ] `limit`, `offset`, `sort` for list endpoints
+- [x] pagination for list endpoints
 
 ### Recommendation
 
-- [ ] `GET /api/v1/tracks/<mbid>/sources`
+- [ ] `GET /api/v1/tracks/<mbid>/sources/`
   - Best guess of matching a MusicBrainzID to a playable source
   - Ping MusicBrainz API to check if source is listed there
   - Search YouTube Data API v3, music category for title, artist
   - Return a list of possible sources
-- [ ] `GET /api/v1/tracks/<mbid>/features` - show audio features from feature matrix for a track
+- [x] `GET /api/v1/tracks/<mbid>/features/` - show audio features from feature matrix for a track
 - [ ] `POST /api/v1/recommend/`
 **Request**
 ```json

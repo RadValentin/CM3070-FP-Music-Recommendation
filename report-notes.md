@@ -447,6 +447,8 @@ Comparing against the previous result for 2M datapoints (11 features) we can see
 
 ### API
 
+We take advantage of DRF's router and ModelViewSet classes to create list and detail endpoints based on Django models. Extended functionality (tracks or albums by an artist) can be added by appending `@action` methods to the classes. We can also extend what each endpoint returns by overriding the corresponding method: `retrieve` for `detail` and `list`.
+
 #### Search
 
 **Trigram search** is a method of searching text by comparing how many 3 consecutive letter substrings (trigrams) are common between a query and the target text. Two strings with many common trigrams are considered to be very similar. For example, from the string "Alice" we can create 3 trigrams: "ali", "lic", and "ice".

@@ -1,8 +1,12 @@
 import logging
+from django.urls import reverse
+import numpy as np
+from django.db.models import F
+from django.http import HttpResponseRedirect
 from rest_framework import mixins, viewsets, status
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import status
 from .models import *
 from .serializers import *
 import recommend_api.recommender as rec
@@ -10,19 +14,104 @@ import recommend_api.recommender as rec
 log = logging.getLogger(__name__)
 
 
+class GenreView(APIView):
+    def get(self, request):
+        genres_dortmund = Track.objects.values_list("genre_dortmund", flat=True).distinct()
+        genres_rosamerica = Track.objects.values_list("genre_rosamerica", flat=True).distinct()
+        
+        return Response({
+            "genre_dortmund": sorted(set(genres_dortmund)),
+            "genre_rosamerica": sorted(set(genres_rosamerica)),
+        })
+
+
 class TrackViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = TrackSerializer
     queryset = Track.objects.all()
+
+    @action(detail=True)
+    def features(self, request, *args, **kwargs):
+        track = self.get_object()
+        track_data = self.get_serializer(track).data
+        mbid = track.musicbrainz_recordingid
+        index = np.where(rec.mbid_to_idx == mbid)[0]
+        features = rec.feature_matrix[index][0]
+        raw_features = rec.feature_matrix_raw[index][0]
+
+        features_dict = {}
+        raw_features_dict = {}
+        for i, feature in enumerate(features):
+            features_dict[rec.feature_names[i]] = feature
+            raw_features_dict[rec.feature_names[i]] = raw_features[i]
+
+        return Response({
+            "track": track_data,
+            "features": features_dict,
+            "raw_features": raw_features_dict
+        })
+    
+    @action(detail=True)
+    def sources(self, request, *args, **kwargs):
+        pass
 
 
 class AlbumViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AlbumSerializer
     queryset = Album.objects.all()
 
+    def retrieve(self, request, *args, **kwargs):
+        album = self.get_object()
+        album_data = self.get_serializer(album).data
+
+        # Get all tracks in this album
+        tracks = Track.objects.filter(album=album).prefetch_related("artists")
+        tracks_data = TrackSerializer(tracks, many=True).data
+
+        # Remove 'album' key from each track dict
+        for track in tracks_data:
+            track.pop("album", None)
+
+        # Add tracks to the response
+        album_data["tracks"] = tracks_data
+        return Response(album_data)
+    
+    @action(detail=True)
+    def art(self, request, *args, **kwargs):
+        mbid = self.get_object().musicbrainz_albumid
+        return HttpResponseRedirect(f"https://coverartarchive.org/release/{mbid}/front-250")
 
 class ArtistViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ArtistSerializer
     queryset = Artist.objects.all()
+
+    def get_data(self, Model, Serializer, order_by: str = None):
+        artist = self.get_object()
+        if order_by is not None:
+            tracks = Model.objects.filter(artists=artist).order_by(
+                F(order_by).desc(nulls_last=True)
+            )
+        else:
+            tracks = Model.objects.filter(artists=artist)
+
+        page = self.paginate_queryset(tracks)
+        if page is not None:
+            serializer = Serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = Serializer(tracks, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True)
+    def tracks(self, request, *args, **kwargs):
+        return self.get_data(Track, TrackSerializer, order_by=None)
+
+    @action(detail=True)
+    def top_tracks(self, request, *args, **kwargs):
+        return self.get_data(Track, TrackSerializer, order_by="submissions")
+
+    @action(detail=True)
+    def albums(self, request, *args, **kwargs):
+        return self.get_data(Album, AlbumSerializer, order_by="date")
 
 
 class RecommendView(APIView):
@@ -53,7 +142,9 @@ class RecommendView(APIView):
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except FileNotFoundError as e:
             # Feature matrix data couldn't be loaded from disk
-            return Response({"detail": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return Response(
+                {"detail": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
         except Exception as e:
             # Any other error
             log.exception("Unexpected error in similar_tracks")
@@ -87,7 +178,10 @@ class RecommendView(APIView):
             artist_name = artist.name if artist else "Unknown Artist"
 
             # Skip if it's the same song by the same artist as the target track
-            if artist_name == target_artist.name and track_obj.title == target_track.title:
+            if (
+                artist_name == target_artist.name
+                and track_obj.title == target_track.title
+            ):
                 continue
 
             # Include similarity score for the track
