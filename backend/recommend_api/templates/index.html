@@ -40,7 +40,7 @@
             <tr>
               <td>{{track.musicbrainz_recordingid}}</td>
               <td>
-                <a href="/api/track/{{track.musicbrainz_recordingid}}">
+                <a href="{% url 'api:track-detail' track.musicbrainz_recordingid %}">
                   {{track.title}} -
                   {% for artist in track.artists.all %}
                     {{ artist.name }}{% if not forloop.last %}, {% endif %}
@@ -48,7 +48,7 @@
                 </a>
               </td>
               <td>
-                <form action="/api/similar/" method="POST">
+                <form action="{% url 'api:recommend' %}" method="POST">
                   <input name="musicbrainz_recordingid" type="text" value="{{track.musicbrainz_recordingid}}" hidden />
                   <input type="submit" value="🔍"/>
                 </form>
@@ -59,7 +59,7 @@
       </div>
       <div>
         <h2>Recommendation based on MBID</h2>
-        <form action="/api/similar/" method="POST">
+        <form action="{% url 'api:recommend' %}" method="POST">
           <input name="musicbrainz_recordingid" type="text" />
           <input type="submit" />
         </form>

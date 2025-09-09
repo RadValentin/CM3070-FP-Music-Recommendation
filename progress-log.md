@@ -87,17 +87,18 @@
   - Increasing batch size for `bulk_create` from 2K to 20K
   - Wrap DB inserts in `transaction.atomic()`
   - Set `synchronous_commit` off
-
+### 09 September
+- Design API
+- Rework earlier API implementation, add endpoints:
+  - `GET /api/v1/tracks|albums|artists/` - list and details for DB models
+  - `POST /api/v1/recommend` - post with MBID to get recommendations for similar songs
+- Implement search endpoint - trigram similarity, ViewSet
 
 ## Final Stretch Plan
 
-### 06 September
-- Design API
+### Second-to-last week
 - Document development in report
 - Document literature review
-
-### Second-to-last week
-- Implement search endpoint
 - Begin developing front-end to consume API: search and recommend
 - 1 day for report writing
 - Rest spent on API and front-end

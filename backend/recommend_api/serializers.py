@@ -1,17 +1,18 @@
 from rest_framework import serializers
 from .models import *
 
+
 # Model serializers (display all fields)
 class ArtistSerializer(serializers.ModelSerializer):
     class Meta:
         model = Artist
-        fields = '__all__'
+        fields = "__all__"
 
 
 class AlbumSerializer(serializers.ModelSerializer):
     class Meta:
         model = Album
-        fields = '__all__'
+        fields = "__all__"
 
 
 class TrackSerializer(serializers.ModelSerializer):
@@ -20,13 +21,23 @@ class TrackSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Track
-        fields = '__all__'
+        fields = [
+            "musicbrainz_recordingid",
+            "title",
+            "artists",
+            "album",
+            "duration",
+            "genre_dortmund",
+            "genre_rosamerica",
+            "submissions"
+        ]
+
 
 # Model serializers for similar/ endpoint (display minimal subset of fields)
 class SimilarAlbumSerializer(serializers.ModelSerializer):
     class Meta:
         model = Album
-        fields = ['musicbrainz_albumid', 'name', 'date']
+        fields = ["musicbrainz_albumid", "name", "date"]
 
 
 class SimilarTrackSerializer(serializers.ModelSerializer):
@@ -36,7 +47,12 @@ class SimilarTrackSerializer(serializers.ModelSerializer):
     class Meta:
         model = Track
         fields = [
-            'musicbrainz_recordingid', 'title', 'artists', 'album','genre_dortmund', 'genre_rosamerica'
+            "musicbrainz_recordingid",
+            "title",
+            "artists",
+            "album",
+            "genre_dortmund",
+            "genre_rosamerica",
         ]
 
 
