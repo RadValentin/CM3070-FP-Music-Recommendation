@@ -16,4 +16,5 @@ urlpatterns = [
     path("api/v1/", include(router.urls)),
     path("api/v1/genres/", api.GenreView.as_view(), name="genre-list"),
     path("api/v1/recommend/", api.RecommendView.as_view(), name="recommend"),
+    path("api/v1/search/", api.SearchView.as_view(), name="search")
 ]

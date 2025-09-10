@@ -102,7 +102,9 @@
 ### 10 September
 - Add ordering for tracks, artists, albums endpoints
 - Add HATEOAS-style links to tracks, artists, albums endpoints through a serializer method field `get_links()`.
-- TODO: Implement search endpoint - trigram similarity, ViewSet
+- Implement search endpoint (`GET /api/v1/search/`) - trigram similarity
+
+### 11 September
 - TODO: Refine recommend endpoint
 - TODO: Implement `GET /api/v1/artists/<mbid>/similar-artists/`
 - TODO: Implement `GET /api/v1/tracks/<mbid>/sources/`

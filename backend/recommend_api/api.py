@@ -1,10 +1,9 @@
-import logging
-from django.urls import reverse
+import logging, time
 import numpy as np
 from django.db.models import F
 from django.http import HttpResponseRedirect
-from rest_framework import mixins, viewsets, status
-from rest_framework.decorators import action, api_view
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -223,3 +222,64 @@ class RecommendView(APIView):
                 "stats": stats_serializer.data,
             }
         )
+
+
+class SearchView(APIView):
+    """
+    get: Search for tracks, albums or artists
+
+    Query Parameters:
+    - q (str): The string to search for
+    - type (str=["track", "album", "artist"]): What type of objects to return
+    """
+    def get(self, request):
+        start_time = time.time()
+        query = request.GET.get("q", "").strip().lower()
+        search_type = request.GET.get("type", "track").strip().lower()
+
+        if not query:
+            return Response(
+                {"error": {"code": "INVALID_SEARCH_PARAM", "message": "Missing 'q' parameter."}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if search_type not in ["track", "artist", "album"]:
+            return Response(
+                {"error": {"code": "INVALID_SEARCH_PARAM", "message": "Invalid 'type' parameter."}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        use_trigram = len(query) >= 3
+        if use_trigram:
+            if search_type == "track":
+                results = Track.objects.filter(title__trigram_similar=query)[:100]
+                serializer = TrackSerializer(results, many=True)
+            if search_type == "artist":
+                results = Artist.objects.filter(name__trigram_similar=query)[:100]
+                serializer = ArtistSerializer(results, many=True)
+            if search_type == "album":
+                results = Album.objects.filter(name__trigram_similar=query)[:100]
+                serializer = AlbumSerializer(results, many=True)
+        else:
+            if search_type == "track": 
+                results = Track.objects.filter(title__icontains=query)[:100]
+                serializer = TrackSerializer(results, many=True)
+            if search_type == "artist":
+                results = Artist.objects.filter(name__icontains=query)[:100]
+                serializer = ArtistSerializer(results, many=True)
+            if search_type == "album":
+                results = Album.objects.filter(name__icontains=query)[:100]
+                serializer = AlbumSerializer(results, many=True)
+        
+        # for debugging SQL query
+        db_query = str(results.query)
+        
+        return Response({
+            "query": query,
+            "type": search_type,
+            "use_trigram": use_trigram,
+            "response_time": round(time.time() - start_time, 3),
+            "db_query": db_query,
+            "count": len(serializer.data),
+            "results": serializer.data
+        })

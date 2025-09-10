@@ -24,6 +24,7 @@ class CustomAPIRootView(APIRootView):
 
         extras["genres"] = request.build_absolute_uri(reverse("api:genre-list"))
         extras["recommend"] = request.build_absolute_uri(reverse("api:recommend"))
+        extras["search"] = request.build_absolute_uri(reverse("api:search"))
 
         # merge extras at the top
         data = OrderedDict(**extras, **resp.data)

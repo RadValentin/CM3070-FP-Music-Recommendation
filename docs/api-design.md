@@ -76,9 +76,9 @@
   }]
 }
 ```
-- [ ] `GET /api/v1/search/`
+- [x] `GET /api/v1/search/`
   - Query: `q` (string), `type` (track title/artist name/album name)
-  - Paginated
+  - <s>Paginated</s> (Update: pagination is very costly, return a good number of results instead and paginate on client)
 - [ ] Disable caching for dynamic resources (/recommend/ results, searches).
 
 ### Filters

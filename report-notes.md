@@ -483,4 +483,13 @@ Filters through `django_filters.rest_framework.DjangoFilterBackend`
 
 **Trigram search** is a method of searching text by comparing how many 3 consecutive letter substrings (trigrams) are common between a query and the target text. Two strings with many common trigrams are considered to be very similar. For example, from the string "Alice" we can create 3 trigrams: "ali", "lic", and "ice".
 
-PostgreSQL natively supports this method of search through its [`pg_trgm` extension](https://www.postgresql.org/docs/current/pgtrgm.html) which must first be enabled: ``
+PostgreSQL natively supports this method of search through its [`pg_trgm` extension](https://www.postgresql.org/docs/current/pgtrgm.html) which must first be enabled. We can do this by manually createing a migration that enables `TrigramExtension`. We'll also need to add `django.contrib.postgres` to the installed apps list to enable the `trigram_similar` lookup field.
+
+Performance of searching by track title on a DB with 1,921,455 rows in Track model, endpoint: `/search/?q=enter` 
+- Only filtering QuerySet using `trigram_similar` lookup field (`Track.objects.filter(title__trigram_similar=query)`) - 0.001s
+- Filtering in QS and paginating the response - 0.991s
+  - Paging the response causes the DB query to be run twice, increasing response times
+- Filtering in QS, paginating the response, ordering by title - 1.6s
+- Annotating the QS response with a similarity score via `TrigramSimilarity` and ordering by similarity - 4s
+
+Conclusion: For blazing fast response we need to just filter by trigram similarity using the lookup field. Anything on top will tank performance.

@@ -1,9 +1,15 @@
 from django.db import models
+from django.contrib.postgres.indexes import GinIndex
 
 
 class Artist(models.Model):
     musicbrainz_artistid = models.CharField(primary_key=True, max_length=36)
     name = models.CharField(max_length=255)
+
+    class Meta:
+        indexes = [
+            GinIndex(fields=["name"], name="artist_name_trgm", opclasses=["gin_trgm_ops"]),
+        ]
 
 
 class Album(models.Model):
@@ -11,6 +17,11 @@ class Album(models.Model):
     name = models.CharField(max_length=255)
     artists = models.ManyToManyField(Artist, through="AlbumArtist")
     date = models.DateField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            GinIndex(fields=["name"], name="album_name_trgm", opclasses=["gin_trgm_ops"]),
+        ]
 
 
 class AlbumArtist(models.Model):
@@ -34,6 +45,11 @@ class Track(models.Model):
     genre_rosamerica = models.CharField(max_length=255)
     submissions = models.IntegerField()
     file_path = models.CharField(max_length=1024, null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            GinIndex(fields=["title"], name="track_title_trgm", opclasses=["gin_trgm_ops"]),
+        ]
 
 
 class TrackArtist(models.Model):
