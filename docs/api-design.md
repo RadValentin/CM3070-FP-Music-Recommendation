@@ -20,7 +20,7 @@
 - [x] `GET /api/v1/genres/` - list all unique genre names in Rosamerica and Dortmund classifications
 - [ ] Use caching for static resources (tracks, albums, artists, features): `ETag` and `Cache-Control`.
 - [x] pagination for list endpoints (through `"DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination"`)
-- [ ] list endpoints should specify what sub-routes are available, ex: `tracks/`, `/albums/` for `/artists/` (HATEOAS)
+- [x] list endpoints should specify what sub-routes are available, ex: `tracks/`, `/albums/` for `/artists/` (HATEOAS)
  
 ### Recommendation
 

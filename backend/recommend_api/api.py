@@ -28,7 +28,7 @@ class GenreView(APIView):
 
 class TrackViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = TrackSerializer
-    queryset = Track.objects.all()
+    queryset = Track.objects.select_related("album").prefetch_related("artists")
     lookup_field = "musicbrainz_recordingid"
     filter_backends = [OrderingFilter]
     ordering_fields = ["title", "album__date"] # fields that may be ordered against
@@ -57,12 +57,12 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
     
     @action(detail=True)
     def sources(self, request, *args, **kwargs):
-        pass
+        return Response({ "detail": "Under construction" })
 
 
 class AlbumViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AlbumSerializer
-    queryset = Album.objects.all()
+    queryset = Album.objects.prefetch_related("artists")
     lookup_field = "musicbrainz_albumid"
     filter_backends = [OrderingFilter]
     ordering_fields = ["name", "date"]
@@ -87,13 +87,16 @@ class AlbumViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=["get"], url_path="art")
     def art(self, request, *args, **kwargs):
         mbid = self.get_object().musicbrainz_albumid
-        return HttpResponseRedirect(f"https://coverartarchive.org/release/{mbid}/front-250")
+        response = HttpResponseRedirect(f"https://coverartarchive.org/release/{mbid}/front-250")
+        response["Cache-Control"] = "public, max-age=2592000, immutable"
+        return response
 
 
 class ArtistViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ArtistSerializer
     queryset = Artist.objects.all()
     lookup_field = "musicbrainz_artistid"
+    filter_backends = [OrderingFilter]
     ordering_fields = ["name"]
     ordering = ["name"]
 
