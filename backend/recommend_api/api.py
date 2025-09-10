@@ -5,6 +5,7 @@ from django.db.models import F
 from django.http import HttpResponseRedirect
 from rest_framework import mixins, viewsets, status
 from rest_framework.decorators import action, api_view
+from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import *
@@ -28,8 +29,12 @@ class GenreView(APIView):
 class TrackViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = TrackSerializer
     queryset = Track.objects.all()
+    lookup_field = "musicbrainz_recordingid"
+    filter_backends = [OrderingFilter]
+    ordering_fields = ["title", "album__date"] # fields that may be ordered against
+    ordering = ["title"] # default ordering
 
-    @action(detail=True)
+    @action(detail=True, methods=["get"], url_path="features")
     def features(self, request, *args, **kwargs):
         track = self.get_object()
         track_data = self.get_serializer(track).data
@@ -58,6 +63,10 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
 class AlbumViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AlbumSerializer
     queryset = Album.objects.all()
+    lookup_field = "musicbrainz_albumid"
+    filter_backends = [OrderingFilter]
+    ordering_fields = ["name", "date"]
+    ordering = ["name"]
 
     def retrieve(self, request, *args, **kwargs):
         album = self.get_object()
@@ -75,14 +84,18 @@ class AlbumViewSet(viewsets.ReadOnlyModelViewSet):
         album_data["tracks"] = tracks_data
         return Response(album_data)
     
-    @action(detail=True)
+    @action(detail=True, methods=["get"], url_path="art")
     def art(self, request, *args, **kwargs):
         mbid = self.get_object().musicbrainz_albumid
         return HttpResponseRedirect(f"https://coverartarchive.org/release/{mbid}/front-250")
 
+
 class ArtistViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ArtistSerializer
     queryset = Artist.objects.all()
+    lookup_field = "musicbrainz_artistid"
+    ordering_fields = ["name"]
+    ordering = ["name"]
 
     def get_data(self, Model, Serializer, order_by: str = None):
         artist = self.get_object()
@@ -101,15 +114,15 @@ class ArtistViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = Serializer(tracks, many=True)
         return Response(serializer.data)
 
-    @action(detail=True)
+    @action(detail=True, methods=["get"], url_path="tracks")
     def tracks(self, request, *args, **kwargs):
         return self.get_data(Track, TrackSerializer, order_by=None)
 
-    @action(detail=True)
+    @action(detail=True, methods=["get"], url_path="top-tracks")
     def top_tracks(self, request, *args, **kwargs):
         return self.get_data(Track, TrackSerializer, order_by="submissions")
 
-    @action(detail=True)
+    @action(detail=True, methods=["get"], url_path="albums")
     def albums(self, request, *args, **kwargs):
         return self.get_data(Album, AlbumSerializer, order_by="date")
 
@@ -191,12 +204,12 @@ class RecommendView(APIView):
             if len(similar_list) >= 5:
                 break
 
-        target_serializer = SimilarTrackSerializer(target_track)
+        target_serializer = TrackSerializer(target_track)
         stats_serializer = RecommendStatsSerializer(recommendations["stats"])
 
         # Keep similarity in payload
         similar_payload = [
-            {**SimilarTrackSerializer(obj).data, "similarity": sim}
+            {**TrackSerializer(obj).data, "similarity": sim}
             for (obj, sim) in similar_list
         ]
 

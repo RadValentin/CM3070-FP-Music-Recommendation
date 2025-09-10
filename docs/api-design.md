@@ -2,13 +2,16 @@
 
 - [x] `GET /api/v1/` - show available endpoints
 - [x] `GET /api/v1/tracks/` - list all tracks (paginated)
+  - Ordering filter querystring param: `title`, `album__date`
 - [x] `GET /api/v1/tracks/<mbid>/` - track details
 - [x] `GET /api/v1/artists/` - list all artists (paginated)
+  - Ordering filter querystring param: `name`
 - [x] `GET /api/v1/artists/<mbid>/` - artist details
 - [x] `GET /api/v1/artists/<mbid>/tracks/` - all tracks by artist (paginated)
 - [x] `GET /api/v1/artists/<mbid>/top-tracks/` - top tracks by artist (paginated)
 - [x] `GET /api/v1/artists/<mbid>/albums/` - albums by artist, sort by release date
 - [x] `GET /api/v1/albums/` - list all albums (paginated)
+  - Ordering filter querystring param: `name`, `date`
 - [x] `GET /api/v1/albums/<mbid>/` - album details
 - [x] `GET /api/v1/albums/<mbid>/art/`
   - Return album cover art from Cover Art Archive (CAA) <br/>
@@ -16,8 +19,9 @@
   https://coverartarchive.org/release-group/{MBID}/front <br/>
 - [x] `GET /api/v1/genres/` - list all unique genre names in Rosamerica and Dortmund classifications
 - [ ] Use caching for static resources (tracks, albums, artists, features): `ETag` and `Cache-Control`.
-- [x] pagination for list endpoints
-
+- [x] pagination for list endpoints (through `"DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination"`)
+- [ ] list endpoints should specify what sub-routes are available, ex: `tracks/`, `/albums/` for `/artists/` (HATEOAS)
+ 
 ### Recommendation
 
 - [ ] `GET /api/v1/tracks/<mbid>/sources/`
@@ -90,10 +94,10 @@
 - [ ] `GET /api/v1/artists/<mbid>/similar-artists/`
 
 ## Other
-- Error shape: `{ "error": { "code":"INVALID_FILTER", "message":"year.min must be <= year.max" } }`
-- Swagger API docs
-- Docstrings
-- CORS enabled
-- Rate limit by: API key (HTTP `Authorization: Bearer <token>`) or anonymous with restrictive limits
-  -  Return `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `Retry-After` headers
-- Discogs API or YouTube thumbnail could also be used for cover art as last resorts
+- [ ] Error shape: `{ "error": { "code":"INVALID_FILTER", "message":"year.min must be <= year.max" } }`
+- [ ] Swagger API docs
+- [ ] Docstrings
+- [ ] CORS enabled
+- [ ] Rate limit by: API key (HTTP `Authorization: Bearer <token>`) or anonymous with restrictive limits
+  - Return `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `Retry-After` headers
+- [ ] Discogs API or YouTube thumbnail could also be used for cover art as last resorts

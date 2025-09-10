@@ -99,11 +99,12 @@
   - `POST /api/v1/recommend/` - post with MBID to get recommendations for similar songs
   - `GET /api/v1/genres/` - show all possible genre tags in DB
 
-### TODO: 10 September
-- Implement search endpoint - trigram similarity, ViewSet
-- Refine recommend endpoint
-- Implement `GET /api/v1/artists/<mbid>/similar-artists/`
-- Implement `GET /api/v1/tracks/<mbid>/sources/`
+### 10 September
+- Add ordering for tracks, artists, albums endpoints
+- TODO: Implement search endpoint - trigram similarity, ViewSet
+- TODO: Refine recommend endpoint
+- TODO: Implement `GET /api/v1/artists/<mbid>/similar-artists/`
+- TODO: Implement `GET /api/v1/tracks/<mbid>/sources/`
 
 ## Final Stretch Plan
 
