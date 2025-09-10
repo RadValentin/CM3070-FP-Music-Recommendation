@@ -5,7 +5,6 @@ from rest_framework.test import APIRequestFactory, APITestCase
 from unittest.mock import patch
 from recommend_api.models import Album, Artist, Track
 from recommend_api.tests.factories import ArtistFactory, AlbumFactory, TrackFactory
-from recommend_api.serializers import SimilarAlbumSerializer, SimilarTrackSerializer, RecommendStatsSerializer
 
 
 class SimilarTracksAPITests(APITestCase):
@@ -43,7 +42,7 @@ class SimilarTracksAPITests(APITestCase):
     @patch("recommend_api.api.rec.recommend")
     def test_response_signature(self, mock_rec):
         mock_rec.return_value = self.recommend_response
-        url = reverse("similar_tracks_api")
+        url = reverse("api:recommend")
         resp = self.client.post(url, {"musicbrainz_recordingid": "A"}, format="json")
         self.assertEqual(resp.status_code, 200)
         self.assertIn("target_track", resp.data)

@@ -4,27 +4,31 @@ from .models import *
 
 # Model serializers (display all fields)
 class ArtistSerializer(serializers.ModelSerializer):
+    mbid = serializers.CharField(source="musicbrainz_artistid")
+
     class Meta:
         model = Artist
-        fields = "__all__"
+        fields = ["mbid", "name"]
 
 
 class AlbumSerializer(serializers.ModelSerializer):
+    mbid = serializers.CharField(source="musicbrainz_albumid")
     artists = ArtistSerializer(many=True)
 
     class Meta:
         model = Album
-        fields = "__all__"
+        fields = ["mbid", "name", "artists", "date"]
 
 
 class TrackSerializer(serializers.ModelSerializer):
+    mbid = serializers.CharField(source="musicbrainz_recordingid")
     artists = ArtistSerializer(many=True)
     album = AlbumSerializer(many=False, required=False)
 
     class Meta:
         model = Track
         fields = [
-            "musicbrainz_recordingid",
+            "mbid",
             "title",
             "artists",
             "album",
@@ -33,30 +37,6 @@ class TrackSerializer(serializers.ModelSerializer):
             "genre_rosamerica",
             "submissions"
         ]
-
-
-# Model serializers for similar/ endpoint (display minimal subset of fields)
-class SimilarAlbumSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Album
-        fields = ["musicbrainz_albumid", "name", "date"]
-
-
-class SimilarTrackSerializer(serializers.ModelSerializer):
-    artists = ArtistSerializer(many=True)
-    album = SimilarAlbumSerializer(many=False, required=False)
-
-    class Meta:
-        model = Track
-        fields = [
-            "musicbrainz_recordingid",
-            "title",
-            "artists",
-            "album",
-            "genre_dortmund",
-            "genre_rosamerica",
-        ]
-
 
 # Recommender serializers
 class RecommendStatsSerializer(serializers.Serializer):

@@ -17,6 +17,8 @@ MBID_REGEX = re.compile(
     re.IGNORECASE,
 )
 
+MIN_YEAR = 1000
+
 
 def is_mbid(s: str) -> bool:
     """
@@ -35,7 +37,7 @@ def log(message):
         print(message)
 
 
-def parse_flexible_date(date_str):
+def parse_flexible_date(date_str:str = None):
     """
     Given a date as a string, try to extract its information as a datetime object
     """
@@ -45,7 +47,7 @@ def parse_flexible_date(date_str):
     date_str = date_str.strip().lower()
 
     # Clean common invalid formats
-    if date_str.startswith("0000") or "00-00" in date_str:
+    if date_str.startswith(("0000", "0001")) or "00-00" in date_str:
         return None
 
     # Remove ordinal suffixes: 1st, 2nd, 3rd, 23rd, etc.
@@ -73,6 +75,9 @@ def parse_flexible_date(date_str):
     for fmt in formats:
         try:
             dt = datetime.strptime(date_str, fmt)
+            if dt.year < MIN_YEAR:
+                return None
+
             # Fill in missing components manually
             if fmt == "%Y":
                 return datetime(dt.year, 1, 1).date()
@@ -89,6 +94,10 @@ def parse_flexible_date(date_str):
         year = int(parts[0])
         month = int(parts[1]) if len(parts) > 1 else 1
         day = int(parts[2]) if len(parts) > 2 else 1
+
+        if year < MIN_YEAR:
+            return None
+
         return datetime(year, month, day).date()
     except Exception:
         return None
@@ -191,6 +200,7 @@ def extract_data_from_json_str(json_str, file_path=None):
         elif not is_mbid(mbid):
             raise ValueError(f"bad MBID: {mbid}")
         
+        # TODO: Strip leading and trailing single/double quotes
         title = tags.get("title", [None])[0]
         if not title:
             raise ValueError("missing title")

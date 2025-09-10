@@ -166,6 +166,8 @@ For 100k records:
 
 Note: By merging duplicates I'm able to fill-in missing information in the dataset, increasing the chances of having a representative single-entry for each track. However this comes with the assumption that most duplicates are correct and outliers are rare.
 
+> TODO: date parsing, evaluate if pulling metadata from MB would have been better (tradeoff in dev time) 
+
 ##### How dates are stored
 - In the SQLite DB dates (`date`, `originaldate`) are stored for albums, not tracks. This data was retrieved initially from MusicBrainz metadata and it represents album-level information (when the album, not the track was released).
 - In the feature matrix (`features_and_index.npz`) dates are stored for each track based on when the track's album was released. This was needed in order to match tracks based on when they were release without needing to query the DB.
@@ -471,6 +473,11 @@ Comparing against the previous result for 2M datapoints (11 features) we can see
 ### API
 
 We take advantage of DRF's router and ModelViewSet classes to create list and detail endpoints based on Django models. Extended functionality (tracks or albums by an artist) can be added by appending `@action` methods to the classes. We can also extend what each endpoint returns by overriding the corresponding method: `retrieve` for `detail` and `list`.
+
+DB field names can be renamed in the serializers to make them human-readable, ex: `musicbrainz_recordingid` becomes `mbid`.
+
+Pagination through `rest_framework.pagination.PageNumberPagination`
+Filters through `django_filters.rest_framework.DjangoFilterBackend`
 
 #### Search
 
