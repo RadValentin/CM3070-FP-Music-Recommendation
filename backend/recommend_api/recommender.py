@@ -3,6 +3,7 @@
 # Note: MBID - MusicBrainz unique IDs
 import os, sys, time
 import numpy as np
+from dataclasses import dataclass
 from sklearn.metrics.pairwise import cosine_similarity
 
 filename = os.path.join(os.path.dirname(__file__), "..", "features_and_index.npz")
@@ -19,25 +20,38 @@ try:
 except FileNotFoundError as ex:
     print(f"Feature file not found at {filename}")
 
-
-def recommend(target_mbid, k=50, use_ros=True):
+    
+def recommend(target_mbid, options=None):
     """
     Returns k tracks that have similar features to a target track identified by MBID.
 
     Args:
-        target_mbid (str): MusicBrainz ID of target track
-        k (int, optional): Number of similar tracks to return
-        use_ros (bool, optional): If Rosamerica classification should be used to match genre (default),
-                        otherwise Dortmund is used.
+        target_mbid (str): MusicBrainz ID of the target track.
+        options (dict, optional): Dictionary of options to control recommendation behavior.
+            - k (int): Number of similar tracks to return (default: 50).
+            - use_ros (bool): Use Rosamerica genre classification for filtering, otherwise Dortmund (default: True).
+            - exclude_mbids (list[str]): List of MBIDs to exclude from recommendations (default: []).
+            - match_genre (bool): Whether to filter by genre (default: True).
+            - match_decade (bool): Whether to filter by decade (default: True).
+
+    Notes:
+        The target_mbid is always excluded from the recommendations, even if not in exclude_mbids.
 
     Returns:
-        dict: A dictionary containing:
-        "target_year": int,
-          "target_genre_dortmund": str,
-          "target_genre_rosamerica": str,
-        - "top_tracks" (list[dict]): List of most similar tracks, each: {mbid, similarity, year, genre_dortmund, genre_rosamerica}.
-        - "stats": Statistics about search {candidate_count, search_time, mean, std, p95, max}
+        dict: {
+            "target_year": int,
+            "target_genre_dortmund": str,
+            "target_genre_rosamerica": str,
+            "top_tracks": list[dict],  # Each dict: {mbid, similarity, year, genre_dortmund, genre_rosamerica}
+            "stats": dict,  # {candidate_count, search_time, mean, std, p95, max}
+        }
     """
+    # Parse options
+    k = options.get("k", 50)
+    use_ros = options.get("use_ros", True)
+    exclude_mbids = options.get("exclude_mbids", [])
+    match_genre = options.get("match_genre", True)
+    match_decade = options.get("match_decade", True)
 
     # Identify the index, year and genre of the targeted track
     idxs = np.where(mbid_to_idx == target_mbid)[0]
@@ -49,30 +63,38 @@ def recommend(target_mbid, k=50, use_ros=True):
     target_genre_dortmund = genre_dortmund[target_index]
     target_genre_rosamerica = genre_rosamerica[target_index]
 
-    # Filter the data to a subset of tracks which are in a += 10 year interval and same genre
-    target_decade = (target_year // 10) * 10
-    same_decade_mask = (years >= target_decade) & (years < target_decade + 10)
-    if use_ros:
-        same_genre_mask = genre_rosamerica == target_genre_rosamerica
+    # Filter the data to a subset of tracks which are in a += 10 year interval, same genre and
+    # aren't excluded
+    mask = np.ones_like(years, dtype=bool)
+    if match_decade:
+        target_decade = (target_year // 10) * 10
+        mask &= (years >= target_decade) & (years < target_decade + 10)
+
+    if match_genre:
+        if use_ros:
+            mask &= genre_rosamerica == target_genre_rosamerica
+        else:
+            mask &= genre_dortmund == target_genre_dortmund
+
+    if exclude_mbids:
+        # exclude list of provided mbids and target track
+        mask &= ~np.isin(mbid_to_idx, exclude_mbids + [target_mbid])
     else:
-        same_genre_mask = genre_dortmund == target_genre_dortmund
-    target_mask = same_decade_mask & same_genre_mask
+        # always exclude the target
+        mask &= ~np.isin(mbid_to_idx, [target_mbid])
 
     # the features we're comparing against, make sure to keep 2D shape
     query_vec = feature_matrix[target_index : target_index + 1]
     # filter EVERYTHING with the same mask, DO NOT rebind globals
-    fm = feature_matrix[target_mask]
-    mb = mbid_to_idx[target_mask]
-    yrs = years[target_mask]
-    gd = genre_dortmund[target_mask]
-    gr = genre_rosamerica[target_mask]
-    target_index = np.where(mb == target_mbid)[0][0]
+    fm = feature_matrix[mask]
+    mb = mbid_to_idx[mask]
+    yrs = years[mask]
+    gd = genre_dortmund[mask]
+    gr = genre_rosamerica[mask]
 
     # Find similar tracks
     start = time.time()
     similarities = cosine_similarity(query_vec, fm).flatten()
-    # exclude target track by setting its similarity value to -Infinity
-    similarities[target_index] = -np.inf
     # `argsort` returns a list of indexes from the similarities array so that the values corresponding to
     # those indexes are sorted in ascending order.
     top_indexes = similarities.argsort()[::-1][:k]
@@ -93,10 +115,6 @@ def recommend(target_mbid, k=50, use_ros=True):
             }
         )
 
-    # Exclude target track from similarities so we can compute basic statistics
-    self_idx = np.argmin(similarities)  # find where sim=-Infinity
-    others = np.delete(similarities, self_idx)
-
     return {
         "target_year": target_year,
         "target_genre_dortmund": target_genre_dortmund,
@@ -105,10 +123,10 @@ def recommend(target_mbid, k=50, use_ros=True):
         "stats": {
             "candidate_count": len(mb),
             "search_time": float(end - start),
-            "mean": float(others.mean()),
-            "std": float(others.std()),
-            "p95": float(np.quantile(others, 0.95)),
-            "max": float(others.max()),
+            "mean": float(similarities.mean()),
+            "std": float(similarities.std()),
+            "p95": float(np.quantile(similarities, 0.95)),
+            "max": float(similarities.max()),
         },
     }
 

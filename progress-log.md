@@ -109,21 +109,26 @@
   - `GET api/v1/schema/` - openapi schema YAML
   - `GET api/v1/swagger-ui/` - SWAGGER style docs
   - `GET api/v1/redoc/` - REDOC style docs
-- TODO: Refine recommend endpoint
-- TODO: Implement `GET /api/v1/artists/<mbid>/similar-artists/`
+- Refine recommend endpoint
+  - Filters for matching genre and decade
+  - Option to exclude songs by MBID
+  - Specify genre matching classifier: dortmund, rosamerica
+  - Limit for number of results
+  - Total weights: similarity vs popularity
+
+### 12 September
+- TODO: Implement search front-end
+### 13 September
+- TODO: Implement recommend front-end
 - TODO: Implement `GET /api/v1/tracks/<mbid>/sources/`
 
 ## Final Stretch Plan
-
-### Second-to-last week
+### Last week
+- TODO: Implement `GET /api/v1/artists/<mbid>/similar-artists/`
 - Document development in report
 - Document literature review
-- Begin developing front-end to consume API: search and recommend
-- 1 day for report writing
 - Rest spent on API and front-end
 - Data exploration: genre distribution, popular tracks, popular artists
 - Include popularity as a way of ranking results
-
-### Last week
 - Polish implementation
 - Finalize report

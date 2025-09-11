@@ -30,17 +30,19 @@
   - Search YouTube Data API v3, music category for title, artist
   - Return a list of possible sources
 - [x] `GET /api/v1/tracks/<mbid>/features/` - show audio features from feature matrix for a track
-- [ ] `POST /api/v1/recommend/`
+- [x] `POST /api/v1/recommend/`
 **Request**
 ```js
 {
-  // listened previously
-  "recent_track_ids": ["mbid","mbid","mbid"],
+  // target track that we compare against others
+  "mbid": "mbid",
+  // listened previously, excluded from results
+  "listened_mbids": ["mbid","mbid","mbid"],
   "filters": { 
-    "year": {"min":1995, "max":2005},
     // if the user "dislikes" a song, we can exclude the artist from future recommendations
     "exclude_artists": ["mbid"], 
     "same_genre": true,
+    "same_decade": true,
     "genre_classification": "rosamerica"
   },
   // how much each audio feature should impact the similarity score
@@ -54,7 +56,7 @@
     "popularity": 0.3
   },
   // how many results to return
-  "limit": 1
+  "limit": 10
 }
 ```
 
@@ -83,9 +85,9 @@
 
 ### Filters
 - [ ] Weights for audio features: 11 main ones + 5 mirex moods, values should be proportional and not all weights need to be provided (infer values)
-- [ ] Genre guardrails options: Rosamerica (default), Dortmund, None
-- [ ] Release year between min and max
-- [ ] Weights for Similarity vs Popularity (what to prioritise)
+- [x] Genre guardrails options: Rosamerica (default), Dortmund, None
+- [x] Same decade guardrails
+- [x] Weights for Similarity vs Popularity (what to prioritise)
 - [ ] Randomness factor
 
 

@@ -15,7 +15,7 @@ class ArtistSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.DictField(child=serializers.CharField()))
     def get_links(self, obj):
-        kwargs = {"musicbrainz_artistid": obj.musicbrainz_artistid}
+        kwargs = {"mbid": obj.musicbrainz_artistid}
         return {
             "self": reverse("api:artist-detail", kwargs=kwargs),
             "tracks": reverse("api:artist-tracks", kwargs=kwargs),
@@ -35,7 +35,7 @@ class AlbumSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.DictField(child=serializers.CharField()))
     def get_links(self, obj):
-        kwargs = {"musicbrainz_albumid": obj.musicbrainz_albumid}
+        kwargs = {"mbid": obj.musicbrainz_albumid}
         return {
             "self": reverse("api:album-detail", kwargs=kwargs),
             "art": reverse("api:album-art", kwargs=kwargs),
@@ -64,7 +64,7 @@ class TrackSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.DictField(child=serializers.CharField()))
     def get_links(self, obj):
-        kwargs = {"musicbrainz_recordingid": obj.musicbrainz_recordingid}
+        kwargs = {"mbid": obj.musicbrainz_recordingid}
         return {
             "self": reverse("api:track-detail", kwargs=kwargs),
             "features": reverse("api:track-features", kwargs=kwargs),
@@ -92,6 +92,7 @@ class AlbumResponseSerializer(AlbumSerializer):
 
 
 class SimilarTrackSerializer(TrackSerializer):
+    """Serialized track data with an added similarity score"""
     similarity = serializers.FloatField()
     
     class Meta(TrackSerializer.Meta):
@@ -113,18 +114,34 @@ class RecommendResponseSerializer(serializers.Serializer):
     stats = RecommendStatsSerializer()
 
 
+class RecommendFiltersSerializer(serializers.Serializer):
+    exclude_artists = serializers.ListField(child=serializers.CharField(), required=False)
+    same_genre = serializers.BooleanField(required=False)
+    same_decade = serializers.BooleanField(required=False)
+    genre_classification = serializers.ChoiceField(["rosamerica", "dortmund"], required=False)
+
+
 class RecommendRequestSerializer(serializers.Serializer):
     mbid = serializers.CharField(
         help_text="MusicBrainz recording ID of the target track"
     )
+    listened_mbids = serializers.ListField(
+        child=serializers.CharField(),
+        help_text="IDs of tracks already listened to, won't show up in recommendations",
+        required=False
+    )
+    filters = RecommendFiltersSerializer(required=False)
+    feature_weights = serializers.DictField(child=serializers.FloatField(), required=False)
+    total_weights = serializers.DictField(child=serializers.FloatField(), required=False)
+    limit = serializers.IntegerField(required=False)
 
 
 class SearchResponseSerializer(serializers.Serializer):
     query = serializers.CharField()
     type = serializers.ChoiceField(["track", "artist", "album"])
-    use_trigram = serializers.BooleanField(),
-    response_time = serializers.FloatField(),
-    count = serializers.IntegerField(min_value=0),
+    use_trigram = serializers.BooleanField()
+    response_time = serializers.FloatField()
+    count = serializers.IntegerField(min_value=0)
     results = serializers.ListField(
         child=serializers.DictField()
     )

@@ -43,7 +43,7 @@ class SimilarTracksAPITests(APITestCase):
     def test_response_signature(self, mock_rec):
         mock_rec.return_value = self.recommend_response
         url = reverse("api:recommend")
-        resp = self.client.post(url, {"musicbrainz_recordingid": "A"}, format="json")
+        resp = self.client.post(url, {"mbid": "A"}, format="json")
         self.assertEqual(resp.status_code, 200)
         self.assertIn("target_track", resp.data)
         self.assertIn("similar_list", resp.data)

@@ -15,8 +15,8 @@ class RecommenderTests(SimpleTestCase):
         rec.feature_matrix = np.array([
             [1.0, 0.0, 0.0],  # A
             [0.9, 0.1, 0.0],  # B  (most similar to A)
-            [0.0, 1.0, 0.0],  # C
-            [0.0, 0.0, 1.0],  # D
+            [0.2, 1.0, 0.0],  # C
+            [0.1, 0.0, 1.0],  # D
         ], dtype=float)
 
         rec.mbid_to_idx = np.array(['A', 'B', 'C', 'D'])
@@ -27,21 +27,49 @@ class RecommenderTests(SimpleTestCase):
         rec.genre_dortmund = np.array(['metal', 'jazz', 'metal', 'metal'])
     
     def test_recommend_rosamerica(self):
-        out = rec.recommend('A', k=2, use_ros=True)
+        out = rec.recommend('A', options={"k":2, "use_ros":True})
 
         self.assertListEqual(list(out.keys()), self.responseKeys)
-        # Candidates are A,B,C (same decade + same ros genre)
-        self.assertEqual(out['stats']['candidate_count'], 3)
-         # A is the target track, so expect B then C
+        # Candidates are B,C (same decade + same ros genre)
+        self.assertEqual(out['stats']['candidate_count'], 2)
         self.assertEqual(out['top_tracks'][0]['mbid'], 'B')
         self.assertEqual(out['top_tracks'][1]['mbid'], 'C')
+        self.assertEqual(len(out['top_tracks']), 2)
+
+    def test_exclude(self):
+        out = rec.recommend('A', options={"k":2, "use_ros":True, "exclude_mbids":['B']})
+
+        self.assertListEqual(list(out.keys()), self.responseKeys)
+        # Only C is candidate, B was excluded
+        self.assertEqual(out['stats']['candidate_count'], 1)
+        self.assertEqual(out['top_tracks'][0]['mbid'], 'C')
+        self.assertEqual(len(out['top_tracks']), 1)
     
     def test_recommend_dortmund(self):
-        out = rec.recommend('A', k=2, use_ros=False)
+        out = rec.recommend('A', options={"k":2, "use_ros": False})
+
+        self.assertListEqual(list(out.keys()), self.responseKeys)
+        self.assertEqual(out['stats']['candidate_count'], 1)
+        self.assertEqual(out['top_tracks'][0]['mbid'], 'C')
+        self.assertEqual(len(out['top_tracks']), 1)
+
+    def test_genre_guardrails_off(self):
+        out = rec.recommend('A', options={"k":2, "use_ros": False, "match_genre": False})
+
+        self.assertListEqual(list(out.keys()), self.responseKeys)
+        self.assertEqual(out['stats']['candidate_count'], 2)
+        self.assertEqual(out['top_tracks'][0]['mbid'], 'B')
+        self.assertEqual(out['top_tracks'][1]['mbid'], 'C')
+        self.assertEqual(len(out['top_tracks']), 2)
+
+    def test_decade_guardrails_off(self):
+        out = rec.recommend('A', options={"k":2, "use_ros": False, "match_decade": False})
 
         self.assertListEqual(list(out.keys()), self.responseKeys)
         self.assertEqual(out['stats']['candidate_count'], 2)
         self.assertEqual(out['top_tracks'][0]['mbid'], 'C')
+        self.assertEqual(out['top_tracks'][1]['mbid'], 'D')
+        self.assertEqual(len(out['top_tracks']), 2)
 
     def test_feature_stats(self):
         # Make one column near-constant to trigger near_zero_col_count

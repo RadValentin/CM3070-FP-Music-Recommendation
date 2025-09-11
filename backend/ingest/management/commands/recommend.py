@@ -43,7 +43,13 @@ def generate_recommendations(target_mbid: str):
     print(f'Total number of columns: {feature_stats["total_col_count"]}')
 
     # Display recommendations
-    recommendations = rec.recommend(target_mbid, 1000, True)
+    recommendations = rec.recommend(
+        target_mbid=target_mbid, 
+        options={
+            "k": 100,
+            "use_ros": True
+        }
+    )
     target_year = recommendations["target_year"]
     target_genre_dortmund = recommendations["target_genre_dortmund"]
     target_genre_rosamerica = recommendations["target_genre_rosamerica"]
@@ -55,6 +61,7 @@ def generate_recommendations(target_mbid: str):
         f'compared against {stats["candidate_count"]:,}/{feature_stats["unique_track_count"]:,}',
     )
 
+    # create a hashmap of the Track objects by mbid
     top_mbids = [t["mbid"] for t in top_tracks]
     track_map = {
         t.musicbrainz_recordingid: t
@@ -63,18 +70,11 @@ def generate_recommendations(target_mbid: str):
         ).prefetch_related("artists")
     }
 
-    # fetch popularity for the current top results
-    subs_qs = Track.objects.filter(
-        musicbrainz_recordingid__in=top_mbids
-    ).values("musicbrainz_recordingid", "submissions")
-    subs_map = {r["musicbrainz_recordingid"]: r["submissions"] or 0 for r in subs_qs}
-
     # add popularity and combined score
-    for t in top_tracks:
-        pop = subs_map.get(t["mbid"], 0)
-        t["popularity"] = pop
+    for track in top_tracks:
+        submissions = track_map.get(track["mbid"]).submissions
         # simple blend: mostly similarity, small nudge from popularity
-        t["final_score"] = 0.9 * t["similarity"] + 0.1 * math.log1p(pop)
+        track["final_score"] = 0.9 * track["similarity"] + 0.1 * math.log1p(submissions)
 
     # rerank by final score
     top_tracks.sort(key=lambda x: x["final_score"], reverse=True)
@@ -109,12 +109,11 @@ def generate_recommendations(target_mbid: str):
 
         seen_artists.add(artist)
         unique_tracks.append(track)
-        pop = subs_map.get(track["mbid"], 0)
 
         print(
             f'{artist_name[:20]:20} | {track_obj.title[:30]:30} | {str(track["year"]):6} | '
             f'{track["genre_dortmund"][:6]:6} | {track["genre_rosamerica"][:4]:4} | '
-            f'{track["similarity"]:2.3f} | {track["popularity"]:3d} | {track["final_score"]:1.3f} | '
+            f'{track["similarity"]:2.3f} | {track_obj.submissions:3d} | {track["final_score"]:1.3f} | '
             f'{track["mbid"]}'
         )
 

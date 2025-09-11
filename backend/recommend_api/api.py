@@ -1,4 +1,4 @@
-import logging, time
+import logging, time, math
 import numpy as np
 from django.db.models import F
 from django.http import HttpResponseRedirect
@@ -6,6 +6,8 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
+from rest_framework.generics import GenericAPIView
+from rest_framework.parsers import JSONParser, FormParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import *
@@ -21,9 +23,12 @@ class GenreView(APIView):
         description="Get unique names of music genres in DB grouped by classifier."
     )
     def get(self, request):
-        genres_dortmund = Track.objects.values_list("genre_dortmund", flat=True).distinct()
-        genres_rosamerica = Track.objects.values_list("genre_rosamerica", flat=True).distinct()
-
+        genres_dortmund = (Track.objects
+            .exclude(genre_dortmund__isnull=True).exclude(genre_dortmund="")
+            .values_list("genre_dortmund", flat=True).distinct().order_by("genre_dortmund"))
+        genres_rosamerica = (Track.objects
+            .exclude(genre_rosamerica__isnull=True).exclude(genre_rosamerica="")
+            .values_list("genre_rosamerica", flat=True).distinct().order_by("genre_rosamerica"))
         data = {
             "genre_dortmund": sorted(set(genres_dortmund)),
             "genre_rosamerica": sorted(set(genres_rosamerica)),
@@ -36,9 +41,10 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = TrackSerializer
     queryset = Track.objects.select_related("album").prefetch_related("artists")
     lookup_field = "musicbrainz_recordingid"
+    lookup_url_kwarg = "mbid"
     filter_backends = [OrderingFilter]
     ordering_fields = ["title", "album__date"] # fields that may be ordered against
-    ordering = ["title"] # default ordering
+    ordering = ["pk"] # default ordering
 
     @extend_schema(
         responses=TrackFeaturesResponseSerializer,
@@ -47,7 +53,6 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=["get"], url_path="features")
     def features(self, request, *args, **kwargs):
         track = self.get_object()
-        track_data = self.get_serializer(track).data
         mbid = track.musicbrainz_recordingid
         index = np.where(rec.mbid_to_idx == mbid)[0]
         features = rec.feature_matrix[index][0]
@@ -60,7 +65,7 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
             raw_features_dict[rec.feature_names[i]] = raw_features[i]
 
         serializer = TrackFeaturesResponseSerializer({
-            "track": track_data,
+            "track": track,
             "features": features_dict,
             "raw_features": raw_features_dict
         })
@@ -78,9 +83,10 @@ class AlbumViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AlbumSerializer
     queryset = Album.objects.prefetch_related("artists")
     lookup_field = "musicbrainz_albumid"
+    lookup_url_kwarg = "mbid"
     filter_backends = [OrderingFilter]
     ordering_fields = ["name", "date"]
-    ordering = ["name"]
+    ordering = ["pk"]
 
     @extend_schema(
         responses=AlbumResponseSerializer,
@@ -119,9 +125,10 @@ class ArtistViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ArtistSerializer
     queryset = Artist.objects.all()
     lookup_field = "musicbrainz_artistid"
+    lookup_url_kwarg = "mbid"
     filter_backends = [OrderingFilter]
     ordering_fields = ["name"]
-    ordering = ["name"]
+    ordering = ["pk"]
 
     def get_data(self, Model, Serializer, order_by: str = None):
         artist = self.get_object()
@@ -165,8 +172,9 @@ class ArtistViewSet(viewsets.ReadOnlyModelViewSet):
         return self.get_data(Album, AlbumSerializer, order_by="date")
 
 
-class RecommendView(APIView):
-    serializer_class = RecommendResponseSerializer
+class RecommendView(GenericAPIView):
+    serializer_class = RecommendRequestSerializer
+    parser_classes = [JSONParser, FormParser]
 
     @extend_schema(
         request=RecommendRequestSerializer,
@@ -174,12 +182,25 @@ class RecommendView(APIView):
         description="Recommend similar tracks for a given MusicBrainz recording ID. Returns the target track, a list of similar tracks (with similarity scores), and recommendation statistics."
     )
     def post(self, request):
-        target_mbid = request.data.get("mbid")
+        # Process options
+        serializer = RecommendRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        target_mbid = serializer.validated_data.get("mbid")
         if not target_mbid:
             return Response(
                 {"detail": "Missing 'mbid' parameter."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        listened_mbids = serializer.validated_data.get("listened_mbids", [])
+        filters = serializer.validated_data.get("filters", {})
+        feature_weights = serializer.validated_data.get("feature_weights", {})
+        total_weights = serializer.validated_data.get("total_weights", {})
+        limit = serializer.validated_data.get("limit", 10)
+        limit = min(limit, 50)
+        use_ros = filters.get("genre_classification", "rosamerica") == "rosamerica"
+        same_genre = filters.get("same_genre", True)
+        same_decade = filters.get("same_decade", True)
 
         try:
             target_track = Track.objects.get(musicbrainz_recordingid=target_mbid)
@@ -193,7 +214,16 @@ class RecommendView(APIView):
         # so we can have a buffer in case we need to filter the data
         # (e.g. same artist shows up multiple times)
         try:
-            recommendations = rec.recommend(target_mbid, 50, True)
+            recommendations = rec.recommend(
+                target_mbid=target_mbid,
+                options={
+                    "k": limit*10, 
+                    "use_ros": use_ros, 
+                    "exclude_mbids": listened_mbids,
+                    "match_genre": same_genre,
+                    "match_decade": same_decade
+                }
+            )
             top_tracks = recommendations["top_tracks"]
         except ValueError as e:
             # MBID not found in feature matrix
@@ -220,8 +250,24 @@ class RecommendView(APIView):
             ).select_related("album").prefetch_related("artists")
         }
 
+        # add popularity and combined score
+        similarity_weight = total_weights.get("similarity", 0.9)
+        popularity_weight = total_weights.get("popularity", 0.1)
+        for track in top_tracks:
+            submissions = track_map.get(track["mbid"]).submissions
+            # simple blend: mostly similarity, small nudge from popularity
+            track["final_score"] = (
+                similarity_weight * track["similarity"] + 
+                popularity_weight * math.log1p(submissions)
+            )
+
+        # rerank by final score
+        top_tracks.sort(key=lambda x: x["final_score"], reverse=True)
+
+
         # Go through the similar tracks and extract a subset by filtering for
         # artist name, track title, etc.
+        seen_artists = set()
         similar_list = []
         for track in top_tracks:
             # Skip is target track is encountered again somehow
@@ -241,30 +287,27 @@ class RecommendView(APIView):
                 and track_obj.title == target_track.title
             ):
                 continue
+            
+            # Only allow 1 track per artist
+            if artist in seen_artists:
+                continue
+            seen_artists.add(artist)
 
             # Include similarity score for the track
-            similar_list.append((track_obj, track["similarity"]))
+            track_obj.similarity = track["similarity"]
+            similar_list.append(track_obj)
 
             # Limit the subset
-            if len(similar_list) >= 5:
+            if len(similar_list) >= limit:
                 break
 
-        target_serializer = TrackSerializer(target_track)
-        stats_serializer = RecommendStatsSerializer(recommendations["stats"])
-
-        # Keep similarity in payload
-        similar_serializer= SimilarTrackSerializer([
-            {**TrackSerializer(obj).data, "similarity": sim}
-            for (obj, sim) in similar_list
-        ])
-
         data = {
-            "target_track": target_serializer.data,
-            "similar_list": similar_serializer.data,
-            "stats": stats_serializer.data,
+            "target_track": target_track,
+            "similar_list": similar_list,
+            "stats": recommendations["stats"],
         }
-        serializer = RecommendResponseSerializer(data)
-        return Response(serializer.data)
+        response_serializer = RecommendResponseSerializer(data)
+        return Response(response_serializer.data)
 
 
 class SearchView(APIView):
@@ -296,23 +339,23 @@ class SearchView(APIView):
         use_trigram = len(query) >= 3
         if use_trigram:
             if search_type == "track":
-                results = Track.objects.filter(title__trigram_similar=query)[:100]
+                results = Track.objects.filter(title__trigram_similar=query)[:100].select_related("album").prefetch_related("artists")
                 serializer = TrackSerializer(results, many=True)
             if search_type == "artist":
                 results = Artist.objects.filter(name__trigram_similar=query)[:100]
                 serializer = ArtistSerializer(results, many=True)
             if search_type == "album":
-                results = Album.objects.filter(name__trigram_similar=query)[:100]
+                results = Album.objects.filter(name__trigram_similar=query)[:100].prefetch_related("artists")
                 serializer = AlbumSerializer(results, many=True)
         else:
             if search_type == "track": 
-                results = Track.objects.filter(title__icontains=query)[:100]
+                results = Track.objects.filter(title__icontains=query)[:100].select_related("album").prefetch_related("artists")
                 serializer = TrackSerializer(results, many=True)
             if search_type == "artist":
                 results = Artist.objects.filter(name__icontains=query)[:100]
                 serializer = ArtistSerializer(results, many=True)
             if search_type == "album":
-                results = Album.objects.filter(name__icontains=query)[:100]
+                results = Album.objects.filter(name__icontains=query)[:100].prefetch_related("artists")
                 serializer = AlbumSerializer(results, many=True)
         
         # for debugging SQL query
