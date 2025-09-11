@@ -2,6 +2,7 @@ import logging, time
 import numpy as np
 from django.db.models import F
 from django.http import HttpResponseRedirect
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
@@ -15,14 +16,20 @@ log = logging.getLogger(__name__)
 
 
 class GenreView(APIView):
+    @extend_schema(
+        responses=GenreResponseSerializer,
+        description="Get unique names of music genres in DB grouped by classifier."
+    )
     def get(self, request):
         genres_dortmund = Track.objects.values_list("genre_dortmund", flat=True).distinct()
         genres_rosamerica = Track.objects.values_list("genre_rosamerica", flat=True).distinct()
-        
-        return Response({
+
+        data = {
             "genre_dortmund": sorted(set(genres_dortmund)),
             "genre_rosamerica": sorted(set(genres_rosamerica)),
-        })
+        }
+        serializer = GenreResponseSerializer(data)
+        return Response(serializer.data)
 
 
 class TrackViewSet(viewsets.ReadOnlyModelViewSet):
@@ -33,6 +40,10 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
     ordering_fields = ["title", "album__date"] # fields that may be ordered against
     ordering = ["title"] # default ordering
 
+    @extend_schema(
+        responses=TrackFeaturesResponseSerializer,
+        description="Get track metadata along with audio features (scaled and unscaled)"
+    )
     @action(detail=True, methods=["get"], url_path="features")
     def features(self, request, *args, **kwargs):
         track = self.get_object()
@@ -48,12 +59,16 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
             features_dict[rec.feature_names[i]] = feature
             raw_features_dict[rec.feature_names[i]] = raw_features[i]
 
-        return Response({
+        serializer = TrackFeaturesResponseSerializer({
             "track": track_data,
             "features": features_dict,
             "raw_features": raw_features_dict
         })
+        return Response(serializer.data)
     
+    @extend_schema(
+        description="Get a list of sources for a track (Youtube)"
+    )
     @action(detail=True)
     def sources(self, request, *args, **kwargs):
         return Response({ "detail": "Under construction" })
@@ -67,6 +82,10 @@ class AlbumViewSet(viewsets.ReadOnlyModelViewSet):
     ordering_fields = ["name", "date"]
     ordering = ["name"]
 
+    @extend_schema(
+        responses=AlbumResponseSerializer,
+        description="Get album metadata and list of tracks"
+    )
     def retrieve(self, request, *args, **kwargs):
         album = self.get_object()
         album_data = self.get_serializer(album).data
@@ -75,14 +94,19 @@ class AlbumViewSet(viewsets.ReadOnlyModelViewSet):
         tracks = Track.objects.filter(album=album).prefetch_related("artists")
         tracks_data = TrackSerializer(tracks, many=True).data
 
-        # Remove 'album' key from each track dict
+        # Remove 'album' key from each track dict as it's redundant
         for track in tracks_data:
             track.pop("album", None)
 
         # Add tracks to the response
         album_data["tracks"] = tracks_data
-        return Response(album_data)
+        serializer = AlbumResponseSerializer(album_data)
+        return Response(serializer.data)
     
+    @extend_schema(
+        responses={302: None},
+        description="Redirects to the album cover art image (250px) from the Cover Art Archive for the given MusicBrainz Album ID."
+    )
     @action(detail=True, methods=["get"], url_path="art")
     def art(self, request, *args, **kwargs):
         mbid = self.get_object().musicbrainz_albumid
@@ -116,25 +140,44 @@ class ArtistViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = Serializer(tracks, many=True)
         return Response(serializer.data)
 
+    @extend_schema(
+        responses=TrackSerializer,
+        description="Get all tracks for the artist."
+    )
     @action(detail=True, methods=["get"], url_path="tracks")
     def tracks(self, request, *args, **kwargs):
         return self.get_data(Track, TrackSerializer, order_by=None)
 
+    @extend_schema(
+        responses=TrackSerializer,
+        description="Get top tracks for the artist, ordered by submissions."
+    )
     @action(detail=True, methods=["get"], url_path="top-tracks")
     def top_tracks(self, request, *args, **kwargs):
         return self.get_data(Track, TrackSerializer, order_by="submissions")
 
+    @extend_schema(
+        responses=AlbumSerializer,
+        description="Get all albums for the artist, ordered by date."
+    )
     @action(detail=True, methods=["get"], url_path="albums")
     def albums(self, request, *args, **kwargs):
         return self.get_data(Album, AlbumSerializer, order_by="date")
 
 
 class RecommendView(APIView):
+    serializer_class = RecommendResponseSerializer
+
+    @extend_schema(
+        request=RecommendRequestSerializer,
+        responses=RecommendResponseSerializer,
+        description="Recommend similar tracks for a given MusicBrainz recording ID. Returns the target track, a list of similar tracks (with similarity scores), and recommendation statistics."
+    )
     def post(self, request):
-        target_mbid = request.data.get("musicbrainz_recordingid")
+        target_mbid = request.data.get("mbid")
         if not target_mbid:
             return Response(
-                {"detail": "Missing 'musicbrainz_recordingid' parameter."},
+                {"detail": "Missing 'mbid' parameter."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -210,28 +253,29 @@ class RecommendView(APIView):
         stats_serializer = RecommendStatsSerializer(recommendations["stats"])
 
         # Keep similarity in payload
-        similar_payload = [
+        similar_serializer= SimilarTrackSerializer([
             {**TrackSerializer(obj).data, "similarity": sim}
             for (obj, sim) in similar_list
-        ]
+        ])
 
-        return Response(
-            {
-                "target_track": target_serializer.data,
-                "similar_list": similar_payload,
-                "stats": stats_serializer.data,
-            }
-        )
+        data = {
+            "target_track": target_serializer.data,
+            "similar_list": similar_serializer.data,
+            "stats": stats_serializer.data,
+        }
+        serializer = RecommendResponseSerializer(data)
+        return Response(serializer.data)
 
 
 class SearchView(APIView):
-    """
-    get: Search for tracks, albums or artists
-
-    Query Parameters:
-    - q (str): The string to search for
-    - type (str=["track", "album", "artist"]): What type of objects to return
-    """
+    @extend_schema(
+        responses=SearchResponseSerializer,
+        description="Search for tracks, albums or artists",
+        parameters=[
+            OpenApiParameter(name="q", type=str, location=OpenApiParameter.QUERY, required=True, description="The string to search for"),
+            OpenApiParameter(name="type", type=str, location=OpenApiParameter.QUERY, required=False, description="What type of objects to return: track, album, or artist"),
+        ]
+    )
     def get(self, request):
         start_time = time.time()
         query = request.GET.get("q", "").strip().lower()
@@ -272,14 +316,14 @@ class SearchView(APIView):
                 serializer = AlbumSerializer(results, many=True)
         
         # for debugging SQL query
-        db_query = str(results.query)
+        # print(str(results.query))
         
-        return Response({
+        serializer = SearchResponseSerializer({
             "query": query,
             "type": search_type,
             "use_trigram": use_trigram,
             "response_time": round(time.time() - start_time, 3),
-            "db_query": db_query,
             "count": len(serializer.data),
             "results": serializer.data
         })
+        return Response(serializer.data)

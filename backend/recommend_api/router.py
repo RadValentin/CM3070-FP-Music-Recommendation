@@ -16,18 +16,30 @@ class CustomAPIRootView(APIRootView):
             return text
 
     def get(self, request, *args, **kwargs):
+        """
+        Augment the default root response to contain:
+        - Info (name/version)
+        - DRF router links
+        - Extra links that were defined outside the router
+        """
         resp = super().get(request, *args, **kwargs)
 
-        extras = OrderedDict()
-        extras["message"] = "Welcome to the TasteMender API"
-        extras["version"] = "v1"
+        info = OrderedDict()
+        info["message"] = "Welcome to the TasteMender API"
+        info["version"] = "v1"
+        data = OrderedDict(**info, **resp.data)
 
+        extras = OrderedDict()
         extras["genres"] = request.build_absolute_uri(reverse("api:genre-list"))
         extras["recommend"] = request.build_absolute_uri(reverse("api:recommend"))
         extras["search"] = request.build_absolute_uri(reverse("api:search"))
-
-        # merge extras at the top
-        data = OrderedDict(**extras, **resp.data)
+        extras["documentation"] = {
+           "schema": request.build_absolute_uri(reverse("api:schema")),
+           "swagger-ui": request.build_absolute_uri(reverse("api:swagger-ui")),
+           "redoc": request.build_absolute_uri(reverse("api:redoc")),
+        }
+        # merge extras at the bottom
+        data = OrderedDict(**data, **extras)
         return Response(data)
 
 class APIRouter(DefaultRouter):

@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "ingest",
     "recommend_api",
     "rest_framework",
+    "drf_spectacular",
     "django_filters",
     "django.contrib.postgres",
     "django.contrib.admin",
@@ -136,10 +137,17 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
     "PAGE_SIZE": 25,
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "TasteMender API",
+    "DESCRIPTION": "Stateless music recommendation API.",
+    "VERSION": "1.0.0",
 }

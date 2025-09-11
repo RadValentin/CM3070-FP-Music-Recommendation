@@ -94,9 +94,9 @@
 - [ ] `GET /api/v1/artists/<mbid>/similar-artists/`
 
 ## Other
-- [ ] Error shape: `{ "error": { "code":"INVALID_FILTER", "message":"year.min must be <= year.max" } }`
-- [ ] Swagger API docs
-- [ ] Docstrings
+- [x] Error shape: `{ "error": { "code":"INVALID_FILTER", "message":"year.min must be <= year.max" } }`
+- [x] Swagger API docs
+- [x] Docstrings
 - [ ] CORS enabled
 - [ ] Rate limit by: API key (HTTP `Authorization: Bearer <token>`) or anonymous with restrictive limits
   - Return `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `Retry-After` headers

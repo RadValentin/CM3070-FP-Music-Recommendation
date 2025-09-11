@@ -479,6 +479,19 @@ DB field names can be renamed in the serializers to make them human-readable, ex
 Pagination through `rest_framework.pagination.PageNumberPagination`
 Filters through `django_filters.rest_framework.DjangoFilterBackend`
 
+#### API Documentation
+
+- Used `drf-spectacular` to generate documentation dynamically withot the need for a separate build step. The views it provides `SpectacularAPIView`, `SpectacularRedocView`, `SpectacularSwaggerView` map to API endpoints and are listed on the API root.
+- All API views were made to serialize their data before returning it as a response. For ModelViewSets the choice of serializer is picked up automatically and listed in the documentation.
+- The `@extend_schema` decorator is used to specify additional info that will show up in the docs:
+  - Choice of serializer for regulat APIViews (`responses`)
+  - Request format serializer (`request`)
+  - Text description (`description`)
+  - Query string parameters (`parameters`)
+
+- If a serializer uses a custom method to generate a field (ex: `get_links()` for HATEOAS) we'll need to sepecify how that field is serialized using the `@extend_schema_field` decorator.
+
+
 #### Search
 
 **Trigram search** is a method of searching text by comparing how many 3 consecutive letter substrings (trigrams) are common between a query and the target text. Two strings with many common trigrams are considered to be very similar. For example, from the string "Alice" we can create 3 trigrams: "ali", "lic", and "ice".

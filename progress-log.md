@@ -105,6 +105,10 @@
 - Implement search endpoint (`GET /api/v1/search/`) - trigram similarity
 
 ### 11 September
+- Added API documentation through `drf-spectacular`
+  - `GET api/v1/schema/` - openapi schema YAML
+  - `GET api/v1/swagger-ui/` - SWAGGER style docs
+  - `GET api/v1/redoc/` - REDOC style docs
 - TODO: Refine recommend endpoint
 - TODO: Implement `GET /api/v1/artists/<mbid>/similar-artists/`
 - TODO: Implement `GET /api/v1/tracks/<mbid>/sources/`

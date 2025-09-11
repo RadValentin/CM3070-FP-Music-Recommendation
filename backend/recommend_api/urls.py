@@ -1,4 +1,5 @@
 from django.urls import path, include, reverse
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 from rest_framework.response import Response
 from rest_framework.routers import DefaultRouter, Route
 from recommend_api.router import APIRouter
@@ -16,5 +17,8 @@ urlpatterns = [
     path("api/v1/", include(router.urls)),
     path("api/v1/genres/", api.GenreView.as_view(), name="genre-list"),
     path("api/v1/recommend/", api.RecommendView.as_view(), name="recommend"),
-    path("api/v1/search/", api.SearchView.as_view(), name="search")
+    path("api/v1/search/", api.SearchView.as_view(), name="search"),
+    path("api/v1/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/v1/swagger-ui/", SpectacularSwaggerView.as_view(url_name="api:schema"), name="swagger-ui"),
+    path("api/v1/redoc/", SpectacularRedocView.as_view(url_name="api:schema"), name="redoc"),
 ]
