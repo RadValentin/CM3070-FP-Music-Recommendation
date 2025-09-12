@@ -3,8 +3,12 @@
 
 ## Installation
 
+1. Install required software: `Python@3.12.4`, `PostgreSQL@17.6`
+
+2. Create a config file in `backend/.env` with DB login information, see `.env.example`
+
+3. Install Django dependencies, check that everything is running:
 ```bash
-# install dependencies
 cd backend/
 pip install -r requirements.txt
 python manage.py migrate
@@ -12,8 +16,15 @@ python manage.py test
 python manage.py runserver
 ```
 
-## (Optional) Building the database from scratch
-Ideally you should have access to the already-built database in SQLite format and the features NPZ file. If this isn't the case you can replicate the DB from scratch using the instructions below. 
+4. Install React dependencies:
+```bash
+cd frontend/
+npm install
+npm run dev
+```
+
+## Building the database from scratch
+Ideally you should have access to the already-built database in SQLite format and the features NPZ file. If this isn't the case you can replicate the DB from scratch using the instructions below. For development, the **sample** data should be enough.
 
 The first step is to download the dataset dumps from AcousticBrainz, these contain track metadata and the audio features used to determine song similarity, link: https://acousticbrainz.org/download. I recommend using a structure like this:
 

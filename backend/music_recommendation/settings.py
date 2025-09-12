@@ -34,6 +34,7 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     "ingest",
     "recommend_api",
+    "corsheaders",
     "rest_framework",
     "drf_spectacular",
     "django_filters",
@@ -47,6 +48,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -130,6 +133,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+# Serve the built front-end
+STATICFILES_DIRS = [BASE_DIR.parent / "frontend" / "dist" / "assets"]
+# WhiteNoise compression/manifest
+WHITENOISE_USE_FINDERS = True
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -151,3 +159,9 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Stateless music recommendation API.",
     "VERSION": "1.0.0",
 }
+
+# allow Vite dev server to hit API in dev
+CORS_ALLOWED_ORIGINS = [
+    "http://127.0.0.1:5173",
+    "http://localhost:5173",
+]

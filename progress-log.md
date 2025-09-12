@@ -117,6 +117,7 @@
   - Total weights: similarity vs popularity
 
 ### 12 September
+- Added skeleton for front-end app that consumes the API using Vite, React, TypeScript
 - TODO: Implement search front-end
 ### 13 September
 - TODO: Implement recommend front-end

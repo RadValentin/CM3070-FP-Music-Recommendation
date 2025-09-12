@@ -22,7 +22,7 @@ class GenreView(APIView):
         responses=GenreResponseSerializer,
         description="Get unique names of music genres in DB grouped by classifier."
     )
-    def get(self, request):
+    def get(self, request, *args, **kwargs):
         genres_dortmund = (Track.objects
             .exclude(genre_dortmund__isnull=True).exclude(genre_dortmund="")
             .values_list("genre_dortmund", flat=True).distinct().order_by("genre_dortmund"))

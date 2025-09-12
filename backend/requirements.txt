@@ -8,6 +8,7 @@ cycler==0.12.1
 debugpy==1.8.15
 decorator==5.2.1
 Django==5.2.3
+django-cors-headers==4.8.0
 django-filter==25.1
 djangorestframework==3.16.0
 dotenv==0.9.9
@@ -65,4 +66,5 @@ typing_extensions==4.15.0
 tzdata==2025.2
 uritemplate==4.2.0
 wcwidth==0.2.13
+whitenoise==6.10.0
 zstandard==0.24.0
