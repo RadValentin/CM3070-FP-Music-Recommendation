@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.postgres.indexes import GinIndex
+from django.contrib.postgres.indexes import GinIndex, GistIndex
 
 
 class Artist(models.Model):
@@ -9,6 +9,7 @@ class Artist(models.Model):
     class Meta:
         indexes = [
             GinIndex(fields=["name"], name="artist_name_trgm", opclasses=["gin_trgm_ops"]),
+            GistIndex(fields=["name"], name="artist_name_trgm_gist", opclasses=["gist_trgm_ops"]),
         ]
 
 
@@ -21,6 +22,7 @@ class Album(models.Model):
     class Meta:
         indexes = [
             GinIndex(fields=["name"], name="album_name_trgm", opclasses=["gin_trgm_ops"]),
+            GistIndex(fields=["name"], name="album_name_trgm_gist", opclasses=["gist_trgm_ops"]),
         ]
 
 
@@ -49,6 +51,7 @@ class Track(models.Model):
     class Meta:
         indexes = [
             GinIndex(fields=["title"], name="track_title_trgm", opclasses=["gin_trgm_ops"]),
+            GistIndex(fields=["title"], name="track_title_trgm_gist", opclasses=["gist_trgm_ops"]),
         ]
 
 

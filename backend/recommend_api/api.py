@@ -344,7 +344,7 @@ class SearchView(APIView):
                 results = (
                     Track.objects.filter(title__trigram_similar=query)
                     .annotate(distance=TrigramDistance("title", query))
-                    .order_by("distance")[:limit]
+                    .order_by("distance", "-submissions")[:limit]
                     .select_related("album")
                     .prefetch_related("artists")
                 )
@@ -383,7 +383,8 @@ class SearchView(APIView):
                 serializer = AlbumSerializer(results, many=True)
 
         # for debugging SQL query
-        # print(str(results.query))
+        #print(str(results.query))
+        #print(results.query.explain(using="default", format="text"))
 
         response_serializer = SearchResponseSerializer({
             "query": query,

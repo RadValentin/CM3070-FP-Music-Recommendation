@@ -120,7 +120,8 @@
 - Added skeleton for front-end app that consumes the API using Vite, React, TypeScript
 - Add FE methods for querying API, types for serializer responses
 - Implement search front-end
-- Annotate search results in API with trigram similarity score and sort by it so most relevant results are returned first. This adds 300-600ms to response times but it's a necessary trade-off to make the results relevant to the user.
+- Annotate search results in API with trigram similarity score and sort by it so most relevant results are returned first. This adds 300-600ms (0.119s -> 0.463s) to query time but it's a necessary trade-off to make the results relevant to the user.
+- Boost performance of search query by creating a GiST index, now 0.028s and with relevant results
 ### 13 September
 - TODO: Implement recommend front-end
 - TODO: Implement `GET /api/v1/tracks/<mbid>/sources/`

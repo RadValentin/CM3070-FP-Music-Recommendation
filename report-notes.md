@@ -494,18 +494,64 @@ Filters through `django_filters.rest_framework.DjangoFilterBackend`
 
 #### Search
 
-**Trigram search** is a method of searching text by comparing how many 3 consecutive letter substrings (trigrams) are common between a query and the target text. Two strings with many common trigrams are considered to be very similar. For example, from the string "Alice" we can create 3 trigrams: "ali", "lic", and "ice".
+**Trigram search** compares how many overlapping 3-character substrings (or trigrams) two strings share. Two strings with many common trigrams are considered to be very similar. For example, from the string "Alice" we can create 3 trigrams: "ali", "lic", and "ice".
 
-PostgreSQL natively supports this method of search through its [`pg_trgm` extension](https://www.postgresql.org/docs/current/pgtrgm.html) which must first be enabled. We can do this by manually createing a migration that enables `TrigramExtension`. We'll also need to add `django.contrib.postgres` to the installed apps list to enable the `trigram_similar` lookup field.
+PostgreSQL exposes trigram operators through the [`pg_trgm` extension](https://www.postgresql.org/docs/current/pgtrgm.html) extension. To enable it we'll need to manually create a migration that enables `TrigramExtension`. We'll also need to add `django.contrib.postgres` to the installed apps list to enable the `trigram_similar` lookup field.
+
+```py
+# Now we can use the lookup field to filter in Django
+Track.objects.filter(title__trigram_similar=query)
+```
+
+```sql
+-- In SQL the % operator is used in the query
+SELECT title
+FROM recommend_api_track
+WHERE title % 'sunshine of your love';
+```
+
+With this implementation the results are somewhat relevant to the query but they're not sorted by the similarity score by default. To rank results, we'll need to annotate the queryset with the trigram distance between the search terms and track title and order them.
+
+```py
+Track.objects.filter(title__trigram_similar=query)
+  .annotate(distance=TrigramDistance("title", query))
+  .order_by("distance")
+```
+
+```sql
+-- The resulting SQL
+SELECT title, (title <-> 'sunshine of your love') AS distance
+FROM recommend_api_track
+WHERE title % 'sunshine of your love'
+ORDER BY distance ASC;
+```
+
+The search results will be more relevant now, however this also increases average query times from `0.119s` to `0.463s` which could be annoying for the user. In order to keep the response times down we can create complementary trigram indexes on the models:
+- **GIN trigram index** (gin_trgm_ops): accelerates filtering like `WHERE title % 'q'`.
+- **GiST trigram index** (gist_trgm_ops): enables k-NN (nearest-neighbour) ordering for queries like `ORDER BY title <-> 'q'` without scanning/sorting the entire table.
+
+```py
+# Example for track model
+class Track(models.Model):
+    title = models.TextField()
+    class Meta:
+        indexes = [
+            GinIndex(fields=["title"], name="track_title_trgm", opclasses=["gin_trgm_ops"]),
+            GistIndex(fields=["title"], name="track_title_trgm_gist", opclasses=["gist_trgm_ops"]),
+        ]
+```
+
+Note: It's important to validate that the indexes are actually used in queries. We can do this either by calling `query.explain()` in Python or exporting the SQL query it generates from a QuerySet and running it in SQL with EXPLAIN. In both cases the explanation should included something like "Index Scan using ... gist_trgm_ops...".
+
 
 Performance of searching by track title on a DB with 1,921,455 rows in Track model, endpoint: `/search/?q=enter` 
-- Only filtering QuerySet using `trigram_similar` lookup field (`Track.objects.filter(title__trigram_similar=query)`) - 0.001s
-- Filtering in QS and paginating the response - 0.991s
+- **Filter only** with `trigram_similar` lookup field (`Track.objects.filter(title__trigram_similar=query)`) - 0.001s
+- **Filter + paginate** Filtering in QS and paginating the response - 0.991s
   - Paging the response causes the DB query to be run twice, increasing response times
-- Filtering in QS, paginating the response, ordering by title - 1.6s
-- Annotating the QS response with a similarity score via `TrigramSimilarity` and ordering by similarity - 4s
-
-Conclusion: For blazing fast response we need to just filter by trigram similarity using the lookup field. Anything on top will tank performance.
+- **Filter + paginate + `ORDER BY title`** Filtering in QS, paginating the response, ordering by title - 1.6s
+- **Filter + `TrigramSimilarity` order, no paging** Annotating the QS response with a similarity score via `TrigramSimilarity` and ordering by similarity, no paging - 0.463s
+- **With GIN + GiST indexes** Adding GIN and GiST indexes - 0.028s
+- **Add secondary order by `submissions`** Sorting by number of submissions - 0.4s
 
 
 ### Front-end
