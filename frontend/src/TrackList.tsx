@@ -1,11 +1,6 @@
 import { useEffect, useState } from "react";
 import { getTracks } from "./api";
-
-type Track = {
-  id: string | number;
-  title: string;
-  artists: { name: string }[];
-};
+import type { Track } from "./types";
 
 export default function TrackList() {
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -13,7 +8,7 @@ export default function TrackList() {
 
   useEffect(() => {
     getTracks()
-      .then((data) => setTracks(data))
+      .then((data) => setTracks(data.results))
       .catch((err) => console.error("API error:", err))
       .finally(() => { setLoading(false); });
   }, []);
@@ -25,7 +20,7 @@ export default function TrackList() {
   return (
     <ul>
       {tracks.map((track) => (
-        <li key={track.id}>
+        <li key={track.mbid}>
           {track.title} - {track.artists[0].name}
         </li>
       ))}
