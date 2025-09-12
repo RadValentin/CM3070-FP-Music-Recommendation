@@ -43,7 +43,7 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_field = "musicbrainz_recordingid"
     lookup_url_kwarg = "mbid"
     filter_backends = [OrderingFilter]
-    ordering_fields = ["title", "album__date"] # fields that may be ordered against
+    ordering_fields = ["title", "album__date", "submissions"] # fields that may be ordered against
     ordering = ["pk"] # default ordering
 
     @extend_schema(
@@ -321,8 +321,9 @@ class SearchView(APIView):
     )
     def get(self, request):
         start_time = time.time()
-        query = request.GET.get("q", "").strip().lower()
+        query = request.GET.get("q", "").strip()
         search_type = request.GET.get("type", "track").strip().lower()
+        limit = int(request.GET.get("limit", 100))
 
         if not query:
             return Response(
@@ -339,23 +340,23 @@ class SearchView(APIView):
         use_trigram = len(query) >= 3
         if use_trigram:
             if search_type == "track":
-                results = Track.objects.filter(title__trigram_similar=query)[:100].select_related("album").prefetch_related("artists")
+                results = Track.objects.filter(title__trigram_similar=query)[:limit].select_related("album").prefetch_related("artists")
                 serializer = TrackSerializer(results, many=True)
             if search_type == "artist":
-                results = Artist.objects.filter(name__trigram_similar=query)[:100]
+                results = Artist.objects.filter(name__trigram_similar=query)[:limit]
                 serializer = ArtistSerializer(results, many=True)
             if search_type == "album":
-                results = Album.objects.filter(name__trigram_similar=query)[:100].prefetch_related("artists")
+                results = Album.objects.filter(name__trigram_similar=query)[:limit].prefetch_related("artists")
                 serializer = AlbumSerializer(results, many=True)
         else:
             if search_type == "track": 
-                results = Track.objects.filter(title__icontains=query)[:100].select_related("album").prefetch_related("artists")
+                results = Track.objects.filter(title__icontains=query)[:limit].select_related("album").prefetch_related("artists")
                 serializer = TrackSerializer(results, many=True)
             if search_type == "artist":
-                results = Artist.objects.filter(name__icontains=query)[:100]
+                results = Artist.objects.filter(name__icontains=query)[:limit]
                 serializer = ArtistSerializer(results, many=True)
             if search_type == "album":
-                results = Album.objects.filter(name__icontains=query)[:100].prefetch_related("artists")
+                results = Album.objects.filter(name__icontains=query)[:limit].prefetch_related("artists")
                 serializer = AlbumSerializer(results, many=True)
         
         # for debugging SQL query

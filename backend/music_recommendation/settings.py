@@ -135,7 +135,7 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 # Serve the built front-end
-STATICFILES_DIRS = [BASE_DIR.parent / "frontend" / "dist" / "assets"]
+STATICFILES_DIRS = [BASE_DIR.parent / "frontend" / "dist"]
 # WhiteNoise compression/manifest
 WHITENOISE_USE_FINDERS = True
 
@@ -161,7 +161,17 @@ SPECTACULAR_SETTINGS = {
 }
 
 # allow Vite dev server to hit API in dev
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:5173",
+]
+CORS_ALLOW_HEADERS = [
+    "authorization",
+    "content-type",
+    "accept",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
 ]

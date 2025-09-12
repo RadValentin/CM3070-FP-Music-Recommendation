@@ -119,7 +119,7 @@
 ### 12 September
 - Added skeleton for front-end app that consumes the API using Vite, React, TypeScript
 - Add FE methods for querying API, types for serializer responses
-- TODO: Implement search front-end
+- Implement search front-end
 ### 13 September
 - TODO: Implement recommend front-end
 - TODO: Implement `GET /api/v1/tracks/<mbid>/sources/`

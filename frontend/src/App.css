@@ -1,0 +1,21 @@
+.main {
+  height: 80vh;
+  overflow-y: auto;
+
+  .content {
+    position: relative;
+    height: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-top: 1rem;
+
+    .track-item {
+      margin-bottom: 10px;
+    }
+  }
+}
+
+.player {
+  background-color: blue;
+  height: 10vh;
+}

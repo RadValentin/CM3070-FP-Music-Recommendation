@@ -5,12 +5,15 @@ import type {
 } from "./types";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || "/api/v1/",
+  baseURL: import.meta.env.VITE_API_BASE || "http://localhost:8000/api/v1/",
   withCredentials: true,
 });
 
-export async function getTracks() {
-  return api.get<Paginated<Track>>(`tracks/`).then(resp => resp.data);
+export async function getTracks(ordering?: string) {
+  const params: Record<string, string> = {};
+  if (ordering) params.ordering = ordering;
+
+  return api.get<Paginated<Track>>(`tracks/`, {params}).then(resp => resp.data);
 }
 
 export function getTrack(mbid: string) {
@@ -61,8 +64,8 @@ export function getRecommendations(body: RecommendRequest) {
   return api.post<RecommendResponse>("/recommend/", body).then(resp => resp.data);
 }
 
-export function searchTracks(query: string) {
-  return api.get<SearchResponse<Track>>(`/search/?type=track&q=${encodeURIComponent(query)}`)
+export function searchTracks(query: string, limit: number=25) {
+  return api.get<SearchResponse<Track>>(`/search/?type=track&q=${encodeURIComponent(query)}&limit=${limit}`)
     .then(resp => resp.data);
 }
 

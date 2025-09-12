@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.urls import path, include, re_path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 from rest_framework.response import Response
@@ -13,8 +14,6 @@ router.register(r"artists", api.ArtistViewSet, basename="artist")
 
 app_name = "api"
 urlpatterns = [
-    path("", views.index, name="index"),
-    re_path(r"^(?!api/).*$", views.SPAView.as_view(), name="spa"),
     path("api/v1/", include(router.urls)),
     path("api/v1/genres/", api.GenreView.as_view(), name="genre-list"),
     path("api/v1/recommend/", api.RecommendView.as_view(), name="recommend"),
@@ -22,4 +21,13 @@ urlpatterns = [
     path("api/v1/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/v1/swagger-ui/", SpectacularSwaggerView.as_view(url_name="api:schema"), name="swagger-ui"),
     path("api/v1/redoc/", SpectacularRedocView.as_view(url_name="api:schema"), name="redoc"),
+]
+
+if settings.DEBUG:
+    from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+    urlpatterns += staticfiles_urlpatterns()
+
+# Redirect requests to SPA view unless the're for the API or static files
+urlpatterns += [
+    re_path(r"^(?!api/|static/).*$", views.SPAView.as_view(), name="spa"),
 ]

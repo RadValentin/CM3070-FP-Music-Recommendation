@@ -5,13 +5,6 @@ from django.views.generic import View
 from .models import *
 
 
-def index(request):
-    tracks = Track.objects.prefetch_related('artists').all().order_by('?')[:20]
-    return render(request, 'index.html', {
-        'tracks': tracks
-    })
-
-
 class SPAView(View):
     """
     View that serves the front-end Single Page App
