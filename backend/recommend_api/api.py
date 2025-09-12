@@ -1,5 +1,6 @@
 import logging, time, math
 import numpy as np
+from django.contrib.postgres.search import TrigramDistance
 from django.db.models import F
 from django.http import HttpResponseRedirect
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -330,39 +331,61 @@ class SearchView(APIView):
                 {"error": {"code": "INVALID_SEARCH_PARAM", "message": "Missing 'q' parameter."}},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         if search_type not in ["track", "artist", "album"]:
             return Response(
                 {"error": {"code": "INVALID_SEARCH_PARAM", "message": "Invalid 'type' parameter."}},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         use_trigram = len(query) >= 3
         if use_trigram:
             if search_type == "track":
-                results = Track.objects.filter(title__trigram_similar=query)[:limit].select_related("album").prefetch_related("artists")
+                results = (
+                    Track.objects.filter(title__trigram_similar=query)
+                    .annotate(distance=TrigramDistance("title", query))
+                    .order_by("distance")[:limit]
+                    .select_related("album")
+                    .prefetch_related("artists")
+                )
                 serializer = TrackSerializer(results, many=True)
             if search_type == "artist":
-                results = Artist.objects.filter(name__trigram_similar=query)[:limit]
+                results = (
+                    Artist.objects.filter(name__trigram_similar=query)
+                    .annotate(distance=TrigramDistance("name", query))
+                    .order_by("distance")[:limit]
+                )
                 serializer = ArtistSerializer(results, many=True)
             if search_type == "album":
-                results = Album.objects.filter(name__trigram_similar=query)[:limit].prefetch_related("artists")
+                results = (
+                    Album.objects.filter(name__trigram_similar=query)
+                    .annotate(distance=TrigramDistance("name", query))
+                    .order_by("distance")[:limit]
+                    .prefetch_related("artists")
+                )
                 serializer = AlbumSerializer(results, many=True)
         else:
             if search_type == "track": 
-                results = Track.objects.filter(title__icontains=query)[:limit].select_related("album").prefetch_related("artists")
+                results = (
+                    Track.objects.filter(title__icontains=query)[:limit]
+                    .select_related("album")
+                    .prefetch_related("artists")
+                )
                 serializer = TrackSerializer(results, many=True)
             if search_type == "artist":
                 results = Artist.objects.filter(name__icontains=query)[:limit]
                 serializer = ArtistSerializer(results, many=True)
             if search_type == "album":
-                results = Album.objects.filter(name__icontains=query)[:limit].prefetch_related("artists")
+                results = (
+                    Album.objects.filter(name__icontains=query)[:limit]
+                    .prefetch_related("artists")
+                )
                 serializer = AlbumSerializer(results, many=True)
-        
+
         # for debugging SQL query
         # print(str(results.query))
-        
-        serializer = SearchResponseSerializer({
+
+        response_serializer = SearchResponseSerializer({
             "query": query,
             "type": search_type,
             "use_trigram": use_trigram,
@@ -370,4 +393,4 @@ class SearchView(APIView):
             "count": len(serializer.data),
             "results": serializer.data
         })
-        return Response(serializer.data)
+        return Response(response_serializer.data)
