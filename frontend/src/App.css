@@ -1,5 +1,5 @@
 .main {
-  height: 80vh;
+  height: calc(100vh - 160px);
   overflow-y: auto;
 
   .content {
@@ -15,7 +15,3 @@
   }
 }
 
-.player {
-  background-color: blue;
-  height: 10vh;
-}

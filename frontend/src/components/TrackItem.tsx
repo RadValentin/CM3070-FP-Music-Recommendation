@@ -2,12 +2,12 @@ import { useState } from "react";
 import "./TrackItem.css";
 import type { Track } from "../types";
 
-type Props = {
+type TrackItemProps = {
   track: Track;
   onPlay?: (track: Track) => void;
 };
 
-export default function TrackItem({ track, onPlay }: Props) {
+export default function TrackItem({ track, onPlay }: TrackItemProps) {
   const [imgError, setImgError] = useState(false);
 
   const artists = track.artists?.map(a => a.name).join(", ") || "Unknown artist";

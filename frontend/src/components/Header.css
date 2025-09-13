@@ -3,7 +3,7 @@
     align-items: center;
     justify-content: space-between;
     background-color: coral;
-    height: 10vh;
+    height: 80px;
     padding: 0.5em 2em;
 
   & > * {
@@ -45,5 +45,9 @@
 
   & a {
     color: #fff;
+  }
+
+  & a + a {
+    margin-left: 1em;
   }
 }

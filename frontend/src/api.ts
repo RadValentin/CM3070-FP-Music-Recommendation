@@ -4,8 +4,10 @@ import type {
   SearchResponse, Album
 } from "./types";
 
+export const API_BASE_URL = import.meta.env.VITE_API_BASE || "http://localhost:8000/api/v1/"
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || "http://localhost:8000/api/v1/",
+  baseURL: API_BASE_URL,
   withCredentials: true,
 });
 

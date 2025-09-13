@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./App.css"
 import type { Track } from "./types";
 import { searchTracks, getTracks } from "./api";
+import Player, { type PlayerRef } from "./components/Player";
 import Header from "./components/Header";
 import TrackList from "./components/TrackList";
 import LoadingSpinner from "./components/LoadingSpinner";
@@ -16,6 +17,7 @@ type ResultsState = {
 function App() {
   const [results, setResults] = useState<ResultsState>({ data: [], status: "TOP" });
   const [isLoading, setLoading] = useState(false);
+  const playerRef = useRef<PlayerRef>(null);
 
   function onSearch(query: string, type: string) {
     if (isLoading) {
@@ -75,7 +77,7 @@ function App() {
       return (
         <div className="content">
           <h2>Top tracks</h2>
-          <TrackList tracks={results.data} onPlay={() => {}}></TrackList>
+          <TrackList tracks={results.data} onPlay={track => { playerRef.current?.loadAndPlay(track) }}></TrackList>
         </div>
       );
     }
@@ -84,7 +86,7 @@ function App() {
       return (
         <div className="content">
           <h2>Search results</h2>
-          <TrackList tracks={results.data} onPlay={() => {}}></TrackList>
+          <TrackList tracks={results.data} onPlay={track => { playerRef.current?.loadAndPlay(track) }}></TrackList>
         </div>
       );
     }
@@ -99,13 +101,11 @@ function App() {
 
   return (
     <>
-      <Header onSearch={onSearch}></Header>
+      <Header onSearch={onSearch} />
       <div className="main">
         {renderContent()}
       </div>
-      <div className="player">
-        Player
-      </div>
+      <Player ref={playerRef} />
     </>
   )
 }

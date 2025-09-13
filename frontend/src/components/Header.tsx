@@ -1,5 +1,6 @@
-import './Header.css'
 import { useState } from 'react';
+import { API_BASE_URL } from '../api';
+import './Header.css'
 
 export default function Header({onSearch}: { onSearch: (query: string, type: string) => void }) {
   const [searchType, setSearchType] = useState("track");
@@ -12,8 +13,6 @@ export default function Header({onSearch}: { onSearch: (query: string, type: str
       onSearch(searchQuery, searchType)
     }
   }
-
-  const api_url = import.meta.env.VITE_API_BASE || "/api/v1/"
 
   return (
     <div className="header">
@@ -32,7 +31,7 @@ export default function Header({onSearch}: { onSearch: (query: string, type: str
         </select>
       </div>
       <div style={{textAlign: "right"}}>
-        <a href={api_url}>API</a>
+        <a href={API_BASE_URL}>API</a>
         <a href="#">About</a>
       </div>
     </div>
