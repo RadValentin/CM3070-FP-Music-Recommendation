@@ -1,6 +1,6 @@
 import numpy as np
 from django.test import SimpleTestCase
-import recommend_api.recommender as rec
+import recommend_api.services.recommender as rec
 
 class RecommenderTests(SimpleTestCase):
     responseKeys = [

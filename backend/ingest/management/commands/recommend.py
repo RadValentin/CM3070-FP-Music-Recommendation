@@ -1,8 +1,8 @@
-import io, sys, time
-import numpy as np, math
+import time
+import numpy as math
 from django.core.management.base import BaseCommand, CommandError
 from recommend_api.models import Track
-import recommend_api.recommender as rec
+import recommend_api.services.recommender as rec
 
 
 class Command(BaseCommand):

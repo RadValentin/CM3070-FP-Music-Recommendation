@@ -6,7 +6,7 @@ import numpy as np
 from dataclasses import dataclass
 from sklearn.metrics.pairwise import cosine_similarity
 
-filename = os.path.join(os.path.dirname(__file__), "..", "features_and_index.npz")
+filename = os.path.join(os.path.dirname(__file__), "../..", "features_and_index.npz")
 try:
     data = np.load(filename, allow_pickle=True)
     # Load the audio features matrix and track metadata into memory

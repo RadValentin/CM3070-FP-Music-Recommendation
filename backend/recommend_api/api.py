@@ -1,5 +1,6 @@
 import logging, time, math
 import numpy as np
+from django.conf import settings
 from django.contrib.postgres.search import TrigramDistance, TrigramWordDistance
 from django.db.models import F
 from django.http import HttpResponseRedirect
@@ -13,7 +14,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import *
 from .serializers import *
-import recommend_api.recommender as rec
+from .services.youtube_sources import get_youtube_source
+import recommend_api.services.recommender as rec
 
 log = logging.getLogger(__name__)
 
@@ -77,7 +79,34 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
     )
     @action(detail=True)
     def sources(self, request, *args, **kwargs):
-        return Response({ "detail": "Under construction" })
+        track = self.get_object()
+
+        try:
+            source = get_youtube_source(track)
+        except Exception as e:
+            log.exception(f"YouTube lookup failed, {e}")
+            payload = {"track": TrackSerializer(track).data, "sources": []}
+            if settings.DEBUG:
+                payload["debug"] = {"error": str(e)}
+            return Response(payload, status=200)
+        
+        if not source:
+            payload = {"track": TrackSerializer(track).data, "sources": []}
+            return Response(payload, status=200)
+        
+        data = [{
+            "provider": "youtube",
+            "id": source.video_id,
+            "title": source.title,
+            "channel": source.channel,
+            "thumbnail": source.thumbnail,
+            "url": source.url,
+        }]
+
+        return Response({
+            "track": TrackSerializer(track).data, 
+            "sources": data
+        })
 
 
 class AlbumViewSet(viewsets.ReadOnlyModelViewSet):

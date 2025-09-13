@@ -170,6 +170,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         except Exception as e:
             tph.log(f"{e} {base_track['file_path']}")
 
+        # Skip tracks that don't have an associated artist.
         if not merged_track["artist_pairs"]:
             missing_artist_count += 1
             continue
