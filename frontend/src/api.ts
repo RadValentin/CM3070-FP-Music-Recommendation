@@ -17,15 +17,15 @@ export async function getTracks(ordering?: string) {
 }
 
 export function getTrack(mbid: string) {
-  return api.get<Track>(`/tracks/${mbid}/`).then(resp => resp.data);
+  return api.get<Track>(`tracks/${mbid}/`).then(resp => resp.data);
 }
 
 export function getTrackFeatures(mbid: string) {
-  return api.get<TrackFeaturesResponse>(`/tracks/${mbid}/features/`).then(resp => resp.data);
+  return api.get<TrackFeaturesResponse>(`tracks/${mbid}/features/`).then(resp => resp.data);
 }
 
 export function getTrackSources(mbid: string) {
-  return api.get(`/tracks/${mbid}/sources/`).then(resp => resp.data);
+  return api.get(`tracks/${mbid}/sources/`).then(resp => resp.data);
 }
 
 export async function getArtists() {
@@ -33,19 +33,19 @@ export async function getArtists() {
 }
 
 export function getArtist(mbid: string) {
-  return api.get<Artist>(`/artists/${mbid}/`).then(resp => resp.data);
+  return api.get<Artist>(`artists/${mbid}/`).then(resp => resp.data);
 }
 
 export function getArtistTracks(mbid: string) {
-  return api.get<Paginated<Track>>(`/artists/${mbid}/tracks/`).then(resp => resp.data);
+  return api.get<Paginated<Track>>(`artists/${mbid}/tracks/`).then(resp => resp.data);
 }
 
 export function getArtistTopTracks(mbid: string) {
-  return api.get<Paginated<Track>>(`/artists/${mbid}/top-tracks/`).then(resp => resp.data);
+  return api.get<Paginated<Track>>(`artists/${mbid}/top-tracks/`).then(resp => resp.data);
 }
 
 export function getArtistAlbums(mbid: string) {
-  return api.get<Paginated<Album>>(`/artists/${mbid}/albums/`).then(resp => resp.data);
+  return api.get<Paginated<Album>>(`artists/${mbid}/albums/`).then(resp => resp.data);
 }
 
 export async function getAlbums() {
@@ -53,19 +53,19 @@ export async function getAlbums() {
 }
 
 export function getAlbum(mbid: string) {
-  return api.get<Album>(`/albums/${mbid}/`).then(resp => resp.data);
+  return api.get<Album>(`albums/${mbid}/`).then(resp => resp.data);
 }
 
 export function getAlbumArt(mbid: string) {
-  return api.get<string>(`/albums/${mbid}/`).then(resp => resp.data);
+  return api.get<string>(`albums/${mbid}/art/`).then(resp => resp.data);
 }
 
 export function getRecommendations(body: RecommendRequest) {
-  return api.post<RecommendResponse>("/recommend/", body).then(resp => resp.data);
+  return api.post<RecommendResponse>("recommend/", body).then(resp => resp.data);
 }
 
 export function searchTracks(query: string, limit: number=25) {
-  return api.get<SearchResponse<Track>>(`/search/?type=track&q=${encodeURIComponent(query)}&limit=${limit}`)
+  return api.get<SearchResponse<Track>>(`search/?type=track&q=${encodeURIComponent(query)}&limit=${limit}`)
     .then(resp => resp.data);
 }
 

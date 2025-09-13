@@ -21,12 +21,12 @@ config = dotenv_values(BASE_DIR / ".env")
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-jb4&(vsla6+72a&1le(m)30*qmp)k60oihb-s-js%0sc0e8r)8"
+SECRET_KEY = config.get("DJANGO_SECRET_KEY", "django-insecure-jb4&(vsla6+72a&1le(m)30*qmp)k60oihb-s-js%0sc0e8r)8")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config.get("DJANGO_DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = config.get("DJANGO_ALLOWED_HOSTS", "localhost").split(",")
 
 
 # Application definition

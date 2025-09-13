@@ -1,6 +1,6 @@
 import logging, time, math
 import numpy as np
-from django.contrib.postgres.search import TrigramDistance
+from django.contrib.postgres.search import TrigramDistance, TrigramWordDistance
 from django.db.models import F
 from django.http import HttpResponseRedirect
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -324,7 +324,13 @@ class SearchView(APIView):
         start_time = time.time()
         query = request.GET.get("q", "").strip()
         search_type = request.GET.get("type", "track").strip().lower()
-        limit = int(request.GET.get("limit", 100))
+        # parse the limit as an int, set an upper bound for it, default to a value for any errors
+        try:
+            limit = int(request.GET.get("limit", 100))
+            if limit < 1 or limit > 500:
+                limit = 100
+        except (ValueError, TypeError):
+            limit = 100
 
         if not query:
             return Response(
@@ -338,12 +344,17 @@ class SearchView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        is_one_word = len(query.split()) == 1
         use_trigram = len(query) >= 3
         if use_trigram:
             if search_type == "track":
+                if is_one_word:
+                    distance_expr = TrigramWordDistance(query, "title")
+                else:
+                    distance_expr = TrigramDistance("title", query)
                 results = (
                     Track.objects.filter(title__trigram_similar=query)
-                    .annotate(distance=TrigramDistance("title", query))
+                    .annotate(distance=distance_expr)
                     .order_by("distance", "-submissions")[:limit]
                     .select_related("album")
                     .prefetch_related("artists")

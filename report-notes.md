@@ -553,6 +553,9 @@ Performance of searching by track title on a DB with 1,921,455 rows in Track mod
 - **With GIN + GiST indexes** Adding GIN and GiST indexes - 0.028s
 - **Add secondary order by `submissions`** Sorting by number of submissions - 0.4s
 
+Relevant links:
+- https://docs.djangoproject.com/en/5.2/ref/contrib/postgres/search/
+- https://medium.com/@saritasa/how-to-optimize-name-search-in-postgresql-with-trigram-and-btree-indexes-02c57eb27687
 
 ### Front-end
 

@@ -1,7 +1,5 @@
-import json
-from django.test import TestCase
-from django.urls import reverse, reverse_lazy
-from rest_framework.test import APIRequestFactory, APITestCase
+from django.urls import reverse
+from rest_framework.test import APITestCase
 from unittest.mock import patch
 from recommend_api.models import Album, Artist, Track
 from recommend_api.tests.factories import ArtistFactory, AlbumFactory, TrackFactory

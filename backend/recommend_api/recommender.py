@@ -47,6 +47,11 @@ def recommend(target_mbid, options=None):
         }
     """
     # Parse options
+    if options is None:
+        options = {}
+    if not isinstance(options, dict):
+        raise TypeError("options must be a dict")
+    
     k = options.get("k", 50)
     use_ros = options.get("use_ros", True)
     exclude_mbids = options.get("exclude_mbids", [])
