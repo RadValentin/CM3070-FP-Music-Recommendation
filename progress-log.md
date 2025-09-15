@@ -122,14 +122,17 @@
 - Implement search front-end
 - Annotate search results in API with trigram similarity score and sort by it so most relevant results are returned first. This adds 300-600ms (0.119s -> 0.463s) to query time but it's a necessary trade-off to make the results relevant to the user.
 - Boost performance of search query by creating a GiST index, now 0.028s and with relevant results
+
 ### 13 September
 - Implement endpoint for getting YouTube playable sources for tracks: `GET /api/v1/tracks/<mbid>/sources/`. Uses YouTube Data API to search for a videos, the query is track title + artist name.
-- TODO: Implement recommend front-end
 
+### 15 September
+- Report writing: Literature Review
 
 ## Final Stretch Plan
 ### Last week
 - TODO: Implement `GET /api/v1/artists/<mbid>/similar-artists/`
+- TODO: Implement recommend front-end
 - Document development in report
 - Document literature review
 - Data exploration: genre distribution, popular tracks, popular artists
