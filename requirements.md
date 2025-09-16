@@ -80,6 +80,26 @@ You will be marked according to the following criteria:
 
 ## Design
 
+In this assignment you will submit a design for this project. 
+
+- Explain the domain and users of the project. Who is the project for? What is the domain of the project (e.g. music game, history education, therapy for phobias, narrative films)?
+- Justify your design choices based on the needs of users/the requirements of the domain
+- The overall structure of the project (for example, this could be the architecture of a software project, the story of a VR project, the visual interface of a mobile app or the research question and methods of a data science project)
+- Identification of the most important technologies and methods you will be using in the project
+- A plan of your work. This should include the major tasks and when you will do them laid out visually (for example in a Gantt chart)
+- A concrete plan for how you will test and evaluate your project. This should include your approach to deciding whether the project has achieved what you set out to do.
+- The proposal should take the form of a PDF document  (minimum font 12pt, minimum margins 2cm). There is a word limit in the summative assessments of 2000 words for your design section, so it is a good idea to try to keep within this limit. You can have additional pages of images or references that do not contribute to the word count.
+
+You will be marked according to the following criteria:
+
+- Is the design of the project clear and of high quality?
+- Is the project concept justified based on the domain and users?
+- Is the workplan explained in enough detail?
+- Is the workplan feasible?
+- Are there contingency plans?
+- Is the evaluation approach sufficiently comprehensive?
+- Is the evaluation strategy appropriate to the aims of the project?
+
 ## Implementation
 
 ## Evaluation
