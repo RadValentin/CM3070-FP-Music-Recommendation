@@ -29,5 +29,5 @@ if settings.DEBUG:
 
 # Redirect requests to SPA view unless the're for the API or static files
 urlpatterns += [
-    re_path(r"^(?!api/|static/).*$", views.SPAView.as_view(), name="spa"),
+    re_path(r"^(?!api/|assets/|static/).*$", views.SPAView.as_view(), name="spa"),
 ]
