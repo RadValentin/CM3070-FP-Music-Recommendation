@@ -28,7 +28,9 @@ function App() {
       return;
     }
 
+    playerRef.current?.reset();
     setLoading(true);
+
     if (type == "track") {
       searchTracks(query)
         .then(resp => {
@@ -36,12 +38,12 @@ function App() {
             data: resp.results, 
             status: resp.results.length !== 0 ? "SEARCH" : "EMPTY"
           });
-          setLoading(false);
         })
         .catch(err => {
           console.error("Error while searching for tracks: ", err);
           setResults({ data: [], status: "ERROR" });
-          setLoading(false);
+        }).finally(() => {
+           setLoading(false);
         });
     }
   }

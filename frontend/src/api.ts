@@ -27,7 +27,7 @@ export function getTrackFeatures(mbid: string) {
 }
 
 export function getTrackSources(mbid: string) {
-  return api.get(`tracks/${mbid}/sources/`).then(resp => resp.data);
+  return api.get(`tracks/${mbid}/sources/`).then(resp => resp.data.sources);
 }
 
 export async function getArtists() {
