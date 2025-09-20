@@ -28,7 +28,7 @@ function App() {
       return;
     }
 
-    playerRef.current?.reset();
+    playerRef.current?.minimize();
     setLoading(true);
 
     if (type == "track") {

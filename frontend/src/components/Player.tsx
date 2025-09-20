@@ -1,12 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useImperativeHandle, useRef, useState } from "react";
-import type { Track } from "../types";
-import { getTrackSources } from "../api.ts"
+import type { Track, SimilarTrack, RecommendRequest } from "../types";
+import { getTrackSources, getRecommendations } from "../api.ts"
 import "./Player.css";
+import TrackItem from "./TrackItem.tsx";
 
 export interface PlayerRef {
   loadAndPlay: (track: Track) => void,
   reset: () => void,
+  minimize: () => void,
 }
 
 export type PlayerProps = {
@@ -18,6 +20,12 @@ type PlayerState = {
   isReady: boolean,
   isPlaying: boolean,
   isMaximized: boolean
+}
+
+type RecState = {
+  similarList: SimilarTrack[],
+  stats: any,
+  listenedMbids: string[]
 }
 
 declare global {
@@ -42,17 +50,34 @@ const loadYouTubeIframeAPI = (() => {
   };
 })();
 
-const defaultState: PlayerState = {
+const defaultPlayerState: PlayerState = {
   track: undefined,
   isReady: false,
   isPlaying: false,
   isMaximized: false
 };
 
+const defaultRecState: RecState = {
+  similarList: [],
+  stats: {},
+  listenedMbids: []
+}
+
 export default function Player({ ref }: PlayerProps) {
+  // Child refs
   const iframeRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [state, setState] = useState<PlayerState>(defaultState);
+  // State refs - needed for methods called by YT player events (closure)
+  const recListRef = useRef<SimilarTrack[]>([]);
+  const recIDsRef = useRef<string[]>([]);
+  // Component state
+  const [playerState, setPlayerState] = useState<PlayerState>(defaultPlayerState);
+  const [recState, setRecState] = useState<RecState>(defaultRecState);
+
+  useEffect(() => {
+    recListRef.current = recState.similarList;
+    recIDsRef.current = recState.listenedMbids;
+  }, [recState.similarList, recState.listenedMbids]);
 
   // Load the YouTube iframe player on first mount
   useEffect(() => {
@@ -71,16 +96,21 @@ export default function Player({ ref }: PlayerProps) {
         },
         events: {
           onReady: () => { 
-            setState(state => ({...state, isReady: true}));
+            setPlayerState(playerState => ({...playerState, isReady: true}));
           },
           onStateChange: (e: any) => {
             const YT = window.YT;
             if (!YT) return;
 
-            setState(state => ({
-              ...state,
+            setPlayerState(playerState => ({
+              ...playerState,
               isPlaying: e.data === YT.PlayerState.PLAYING
             }));
+
+            // If video ended, play first recommendation
+            if (e.data === YT.PlayerState.ENDED && recListRef.current.length > 0) {
+              playTrack(recListRef.current[0]);
+            }
           }
         }
       });
@@ -100,30 +130,50 @@ export default function Player({ ref }: PlayerProps) {
   useImperativeHandle(ref, () => ({
     // Play a track
     loadAndPlay: (track: Track) => { 
-      console.log("I've been told to play this track:", track);
-      getTrackSources(track.mbid).then(sources => {
-        if (!sources[0]) {
-          console.error(`No sources found for mbid ${track.mbid}`)
-          return;
-        }
-
-        iframeRef.current.loadVideoById({ videoId: sources[0].id });
-        setState(state => ({ ...state, track, isMaximized: true }));
-      })
+      playTrack(track);
+      setPlayerState(defaultPlayerState);
+      setRecState(defaultRecState);
     },
     // Stop playback and reset state
     reset: () => {
-      try {
-        iframeRef.current?.stopVideo?.();
-      } catch (e) {
-        console.warn("Could not stop video:", e);
-      }
-      setState(defaultState);
+      iframeRef.current?.stopVideo();
+      setPlayerState(defaultPlayerState);
+      setRecState(defaultRecState);
+    },
+    minimize: () => {
+      setPlayerState(playerState => ({...playerState, isMaximized: false}));
     }
   }));
 
+  const playTrack = (track: Track) => {
+    console.log("I've been told to play this track:", track);
+    getTrackSources(track.mbid).then(sources => {
+      if (!sources[0]) {
+        console.error(`No sources found for mbid ${track.mbid}`)
+        return;
+      }
+
+      iframeRef.current.loadVideoById({ videoId: sources[0].id });
+      setPlayerState(playerState => ({ ...playerState, track, isMaximized: true }));
+
+      const recommendPayload: RecommendRequest = {
+        mbid: track.mbid,
+        listened_mbids: recIDsRef.current
+      };
+      getRecommendations(recommendPayload).then(data => {
+        console.log("Got recommendations:", data);
+        setRecState(recState => ({
+          ...recState, 
+          similarList: data.similar_list, 
+          stats: data.stats,
+          listenedMbids: [track.mbid, ...recState.listenedMbids]
+        }))
+      });
+    });
+  };
+
   const togglePlayback = () => {
-    if (state.isPlaying) {
+    if (playerState.isPlaying) {
       iframeRef.current?.pauseVideo();
     } else {
       iframeRef.current?.playVideo();
@@ -131,15 +181,15 @@ export default function Player({ ref }: PlayerProps) {
   };
 
   const toggleMaximize = () => {
-    setState(state => ({...state, isMaximized: !state.isMaximized}));
+    setPlayerState(playerState => ({...playerState, isMaximized: !playerState.isMaximized}));
   }
 
   const renderContent = () => {
-    if (!state.track) {
+    if (!playerState.track) {
       return;
     }
 
-    const track = state.track;
+    const track = playerState.track;
     const artists = track.artists?.map(a => a.name).join(", ") || "Unknown artist";
     const album = track.album?.name ?? null;
     const year = track.album?.date ? new Date(track.album.date).getFullYear() : null;
@@ -157,13 +207,13 @@ export default function Player({ ref }: PlayerProps) {
         
         <div>
           <button type="button" className="button" aria-label="Play/Pause" onClick={togglePlayback}>
-            { state.isPlaying 
+            { playerState.isPlaying 
               ? <i className="fa-solid fa-pause"></i> 
               : <i className="fa-solid fa-play"></i>
             }
           </button>
           <button type="button" className="button" aria-label="Minimize/Maximize" onClick={toggleMaximize}>
-            { state.isMaximized 
+            { playerState.isMaximized 
               ? <i className="fa-solid fa-caret-down"></i> 
               : <i className="fa-solid fa-caret-up"></i>
             }
@@ -173,16 +223,28 @@ export default function Player({ ref }: PlayerProps) {
     );
   };
 
-  const overlayClass = state.isMaximized ? "overlay maximized" : "overlay minimized";
+  const overlayClass = playerState.isMaximized ? "overlay maximized" : "overlay minimized";
 
   return (
     <div className="player">
       <div className={overlayClass}>
         <div className="filters"></div>
         <div className="iframe" ref={containerRef}></div>
-        <div className="recommendations"></div>
+        <div className="recommendations">
+          <div className="heading">Up Next:</div>
+          {recState.similarList.map(track => <TrackItem key={track.mbid} track={track} onPlay={() => {playTrack(track)}} />)}
+          <div className="heading">Stats:</div>
+          <ul>
+            <li>candidate_count: {recState.stats.candidate_count}</li>
+            <li>max: {recState.stats.max}</li>
+            <li>mean: {recState.stats.mean}</li>
+            <li>p95: {recState.stats.p95}</li>
+            <li>search_time: {recState.stats.search_time}</li>
+            <li>std: {recState.stats.std}</li>
+          </ul>
+        </div>
       </div>
-      {state.track && renderContent()}
+      {playerState.track && renderContent()}
     </div>
   );
 }
