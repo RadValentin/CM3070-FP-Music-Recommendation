@@ -223,6 +223,34 @@ export default function Player({ ref }: PlayerProps) {
     );
   };
 
+  const renderRecommendations = () => {
+    if (!recState.similarList || recState.similarList.length < 1) {
+      return;
+    }
+
+    const firstRec = recState.similarList[0];
+    const otherRec = recState.similarList.slice(1);
+
+    return (
+      <div className="recommendations">
+        <div className="heading">Up Next:</div>
+        <TrackItem key={firstRec.mbid} track={firstRec} onPlay={() => {playTrack(firstRec)}} />
+        <div className="heading">Other recommendations:</div>
+        {otherRec.map(track => <TrackItem key={track.mbid} track={track} onPlay={() => {playTrack(track)}} />)}
+        <div className="heading">Stats:</div>
+        <ul>
+          <li>Candidate count: {recState.stats.candidate_count}</li>
+          <li>Max similarity: {Number(recState.stats.max).toPrecision(5)}</li>
+          <li>Mean similarity: {Number(recState.stats.mean).toPrecision(5)}</li>
+          <li>P95: {Number(recState.stats.p95).toPrecision(5)}</li>
+          <li>STD: {Number(recState.stats.std).toPrecision(5)}</li>
+          <li>Cosine search time: {Number(recState.stats.search_time).toPrecision(5)}s</li>
+          <li>Listened to {recState.listenedMbids.length} tracks</li>
+        </ul>
+      </div>
+    );
+  };
+
   const overlayClass = playerState.isMaximized ? "overlay maximized" : "overlay minimized";
 
   return (
@@ -230,19 +258,7 @@ export default function Player({ ref }: PlayerProps) {
       <div className={overlayClass}>
         <div className="filters"></div>
         <div className="iframe" ref={containerRef}></div>
-        <div className="recommendations">
-          <div className="heading">Up Next:</div>
-          {recState.similarList.map(track => <TrackItem key={track.mbid} track={track} onPlay={() => {playTrack(track)}} />)}
-          <div className="heading">Stats:</div>
-          <ul>
-            <li>candidate_count: {recState.stats.candidate_count}</li>
-            <li>max: {recState.stats.max}</li>
-            <li>mean: {recState.stats.mean}</li>
-            <li>p95: {recState.stats.p95}</li>
-            <li>search_time: {recState.stats.search_time}</li>
-            <li>std: {recState.stats.std}</li>
-          </ul>
-        </div>
+        {renderRecommendations()}
       </div>
       {playerState.track && renderContent()}
     </div>

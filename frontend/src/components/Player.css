@@ -29,6 +29,23 @@
     overflow: auto;
   }
 
+  & .recommendations {
+    padding: 1rem;
+    
+    & .heading {
+      color: white;
+      font-weight: bold;
+    }
+
+    & ul {
+      color: white;
+    }
+
+    & .track-item {
+      margin-bottom: .5rem;
+    }
+  }
+
   & .content {
     padding: 10px;
     display: flex;

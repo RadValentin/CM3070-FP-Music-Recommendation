@@ -32,7 +32,7 @@ export default function Header({onSearch}: { onSearch: (query: string, type: str
       </div>
       <div style={{textAlign: "right"}}>
         <a href={API_BASE_URL}>API</a>
-        <a href="#">About</a>
+        {/* <a href="#">About</a> */}
       </div>
     </div>
   );
