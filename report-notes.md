@@ -69,6 +69,8 @@ Other potential data sources:
 
 ## Development
 
+Repo structure diagram: https://www.mermaidchart.com/app/projects/dc9676ab-4061-43ce-8b7b-18a12bea05b7/diagrams/54cf4afe-1cbc-471e-9b64-e1286174a522/version/v0.1/edit
+
 ### Prototype App
 
 As a placeholder for the final dataset, I used the ["Spotify Million Song Dataset"](https://www.kaggle.com/datasets/notshrirang/spotify-million-song-dataset) licensed under [CC0: Public Domain](https://creativecommons.org/publicdomain/zero/1.0/) from Kaggle.

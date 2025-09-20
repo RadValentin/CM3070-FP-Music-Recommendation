@@ -1,5 +1,6 @@
 # Progress Log
 
+## Phase 1 - Foundations
 ### 09 June 2025 
 - Drafted a simple development plan
 - Went through Week 3 materials
@@ -17,6 +18,8 @@
 ### 16 June 2025
 - Finalized report section on prototype development
 - Submitted preliminary report
+
+## Phase 2 - Dataset Expansion & Architecture
 ### 17 July 2025
 - Sketch out a rough development plan and create a few Github issues for the 1st week work
 ### 18 July 2025
@@ -32,9 +35,11 @@
 ### 29 July
 - Research ISMIR and recommender systems
 ### 30 July
-- TODO: Read `A Historical Survey of Music Recommendation Systems - Towards Evaluation.pdf`
+- Read `A Historical Survey of Music Recommendation Systems - Towards Evaluation`
 ### 11 August
 - Normalize database by extracting Artist and Album information from Tracks to their own models
+
+## Phase 3 - Recommendation Pipeline
 ### 12 August
 - Store information about high-level features (acousticness, danceability) in vector files instead of in the DB
 - Implement a script that makes recommendations based on the cosine similarity of audio features
@@ -54,6 +59,8 @@
 - Add endpoint for making recommendations `api/similar/`
 ### 23 August
 - Add tests for recommendation endpoint
+
+## Phase 4 - API Expansion
 ### 03 September
 - Iron out data processing:
   - Add script for compiling many JSON files into one NDJSON to speed up data ingest process by reducing file open/close overhead. Dataset load time time went from 33s to 29s for 100k records (it's going to matter for 30M records).
@@ -126,15 +133,18 @@
 ### 13 September
 - Implement endpoint for getting YouTube playable sources for tracks: `GET /api/v1/tracks/<mbid>/sources/`. Uses YouTube Data API to search for a videos, the query is track title + artist name.
 
+## Phase 5 - Polish
 ### 15 September
 - Report writing: Literature Review
+### 16 September
+- Report writing: Literature Review
+### 17 September
+- Report writing: Design
 
 ## Final Stretch Plan
 ### Last week
 - TODO: Implement `GET /api/v1/artists/<mbid>/similar-artists/`
 - TODO: Implement recommend front-end
 - Document development in report
-- Document literature review
 - Data exploration: genre distribution, popular tracks, popular artists
 - Polish implementation
-- Finalize report

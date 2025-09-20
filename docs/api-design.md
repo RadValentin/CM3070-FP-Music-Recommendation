@@ -24,7 +24,7 @@
  
 ### Recommendation
 
-- [ ] `GET /api/v1/tracks/<mbid>/sources/`
+- [x] `GET /api/v1/tracks/<mbid>/sources/`
   - Best guess of matching a MusicBrainzID to a playable source
   - Ping MusicBrainz API to check if source is listed there
   - Search YouTube Data API v3, music category for title, artist
@@ -63,19 +63,25 @@
 **Response**
 ```json
 {
-  "results": [{
-    "track_id":"mbid",
-    "title": "Enter Sandman",
-    "artist_id": "mbid",
-    "artist": "Metallica",
-    "album_id": "mbid",
-    "album": "Metallica",
-    "genre_rosamerica": "roc",
-    "genre_dortmund": "electronic",
-    "similarity": 0.82,
-    "popularity": 0.9,
-    "submissions": 5,
-  }]
+  "target_track": {
+    "mbid": "62c2e20a-559e-422f-a44c-9afa7882f0c4",
+    "title": "Enter Sandman"
+  },
+  "similar_list": [
+    {
+      "mbid": "9420c245-10aa-43bf-a583-08f0219e5666",
+      "title": "Don't Tread on Me",
+      "similarity": 0.9326974749565125
+    }
+  ],
+  "stats": {
+    "candidate_count": 79448,
+    "search_time": 0.008000850677490234,
+    "mean": 0.4038538336753845,
+    "std": 0.3162822425365448,
+    "p95": 0.8052042126655579,
+    "max": 0.9930822849273682
+  }
 }
 ```
 - [x] `GET /api/v1/search/`

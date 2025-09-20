@@ -1,7 +1,8 @@
 # General Instructions
 
-## Overview
+NOTE: This is a report on work done, should be in past tense unless when talking about future work.
 
+## Overview
 In this staff graded assignment you will submit your final project report. The report will consist of six chapters:
 
 1. **Introduction:** this will explain the project concept and motivation for the project, and **must** also state which project template you are using. Please include the project number in the way it has been listed in the template. (max 1000 words)

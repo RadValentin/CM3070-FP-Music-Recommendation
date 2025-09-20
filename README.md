@@ -3,7 +3,7 @@
 
 ## Installation
 
-1. Install required software: `Python@3.12.4`, `PostgreSQL@17.6`
+1. Install required software: `Python@3.12.4`, `PostgreSQL@17.6`, `Node.js@v20.17.0 `
 
 2. Create a config file in `backend/.env` with DB login information, see `.env.example`
 
@@ -80,13 +80,21 @@ wget -r -np -nH --cut-dirs=5 -P . https://data.metabrainz.org/pub/musicbrainz/da
 md5sum -c MD5SUMS
 ```
 
-## Folder Structure
+## Repo Structure
 
-- `backend`
-  - `music_recommendation` - the main Django project
-  - `recommend_api` - the Django app that provides the music recommendation API and serves the HTML/JS/CSS assets
-  - `ingest` - scripts and commands for processing the datasets and building the DB
-- `frontend` - assets that are bundled into static assets and served by the `recommend_api` app
+- `backend/`
+  - `music_recommendation/` - the main Django project
+  - `recommend_api/` - recommendation API
+    - `services/`
+      - `recommender.py` - recommendation logic
+      - `youtube_sources.py` - gets playable sources for tracks
+    - `tests/` - unit tests
+    - `api.py` - endpoint views
+  - `ingest/` - scripts for building the DB
+    - `management/commands/`
+      - `build_db.py` - dataset ingest and DB build command
+      - `recommend.py` - command for showing recommendations
+- `frontend/` - standalone app that consumes the API
 
 
 ### Notes for project
