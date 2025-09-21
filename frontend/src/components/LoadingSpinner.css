@@ -1,5 +1,4 @@
 .loading-spinner {
-  background-color: rgba(0, 0, 0, .3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -16,6 +15,13 @@
     display: inline-block;
     box-sizing: border-box;
     animation: rotation 1s linear infinite;
+  }
+
+  &.dark {
+    background-color: rgba(0, 0, 0, .3);
+  }
+  &.light {
+    background-color: rgba(255, 255, 255, .3);
   }
 
   &.dark .spinner {

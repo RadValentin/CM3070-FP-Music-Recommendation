@@ -16,12 +16,29 @@
     display: block;
   }
 
+  & label span {
+    text-overflow: ellipsis;
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
   & input {
     margin: 0.5em 0;
     accent-color: coral;
   }
 
+  & .sliders-container {
+    columns: 2;
+  }
+
   & .slider {
     width: 100%;
+  }
+}
+
+@media (width < 992px) {
+  .filters .sliders-container {
+    columns: 1;
   }
 }

@@ -170,7 +170,6 @@ export default function Player({ ref }: PlayerProps) {
         isLoading: false, 
         similarList: data.similar_list, 
         stats: data.stats,
-        listenedMbids: [track.mbid, ...recState.listenedMbids]
       }))
     }).catch(() => {
       setRecState(recState => ({...recState, isLoading:false}));
@@ -282,16 +281,6 @@ export default function Player({ ref }: PlayerProps) {
         <TrackItem key={firstRec.mbid} track={firstRec} onPlay={() => {playTrack(firstRec)}} />
         <div className="heading">Other recommendations:</div>
         {otherRec.map(track => <TrackItem key={track.mbid} track={track} onPlay={() => {playTrack(track)}} />)}
-        <div className="heading">Stats:</div>
-        <ul>
-          <li>Candidate count: {recState.stats.candidate_count}</li>
-          <li>Max similarity: {Number(recState.stats.max).toPrecision(5)}</li>
-          <li>Mean similarity: {Number(recState.stats.mean).toPrecision(5)}</li>
-          <li>P95: {Number(recState.stats.p95).toPrecision(5)}</li>
-          <li>STD: {Number(recState.stats.std).toPrecision(5)}</li>
-          <li>Cosine search time: {Number(recState.stats.search_time).toPrecision(5)}s</li>
-          <li>Listened to {recState.listenedMbids.length} tracks</li>
-        </ul>
       </div>
     );
   };
@@ -304,7 +293,23 @@ export default function Player({ ref }: PlayerProps) {
         <div className="player-filters">
           <Filters onChange={onFiltersChange} />
         </div>
-        <div className="player-iframe" ref={containerRef}></div>
+        <div className="player-iframe">
+          <div ref={containerRef}></div>
+          {recState && recState.stats && (
+            <>
+              <div className="heading">Stats</div>
+              <ul>
+                <li>Candidate count: {recState.stats.candidate_count}</li>
+                <li>Max similarity: {Number(recState.stats.max).toPrecision(5)}</li>
+                <li>Mean similarity: {Number(recState.stats.mean).toPrecision(5)}</li>
+                <li>P95: {Number(recState.stats.p95).toPrecision(5)}</li>
+                <li>STD: {Number(recState.stats.std).toPrecision(5)}</li>
+                <li>Cosine search time: {Number(recState.stats.search_time).toPrecision(5)}s</li>
+                <li>Listened to {recState.listenedMbids.length} tracks</li>
+              </ul>
+            </>
+          )}
+        </div>
         {renderRecommendations()}
       </div>
       {playerState.track && renderContent()}

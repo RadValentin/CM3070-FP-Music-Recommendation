@@ -40,14 +40,22 @@
   }
 
   & .player-filters,
-  & .player-iframe,
   & .player-recommendations {
     flex: 1;
     overflow: auto;
   }
 
   & .player-iframe {
-    align-self: center;
+    display: flex;
+    flex-direction: column;
+    flex: 1.5;
+    margin-top: 1rem;
+    color: white;
+  }
+
+  & .player-iframe iframe {
+    width: 100%;
+    margin-bottom: 1rem;
   }
 
   & .player-recommendations {
