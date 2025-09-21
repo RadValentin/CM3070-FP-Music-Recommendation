@@ -113,12 +113,6 @@ export default function Filters({ onChange }: FiltersProps) {
     handleChangeEnd();
   }, [filters]);
 
-
-  const FEATURES = [
-    "happiness", "sadness", "relaxedness", "partyness",
-  "acousticness", "electronicness", "instrumentalness", "tonality", "brightness", "moods_mirex_1",
-  "moods_mirex_2", "moods_mirex_3", "moods_mirex_4", "moods_mirex_5"];
-
   const getFeatureDisplayName = (key: string) => FEATURE_DISPLAY_NAMES[key] ?? key;
 
   return (
@@ -177,7 +171,7 @@ export default function Filters({ onChange }: FiltersProps) {
         </label>
       </div>
       
-      <div className="heading">Feature Weights</div>
+      <div className="heading">Similarity Weights</div>
       <div className="sliders-container">
         {FEATURES.map(feature_name => (
           <label key={feature_name}>
