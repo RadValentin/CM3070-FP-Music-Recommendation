@@ -29,7 +29,8 @@ type RecState = {
   isLoading: boolean,
   similarList: SimilarTrack[],
   stats: any,
-  listenedMbids: string[]
+  listenedMbids: string[],
+  filtersPayload: FiltersPayload
 }
 
 declare global {
@@ -65,7 +66,8 @@ const defaultRecState: RecState = {
   isLoading: false,
   similarList: [],
   stats: {},
-  listenedMbids: []
+  listenedMbids: [],
+  filtersPayload: {}
 }
 
 export default function Player({ ref }: PlayerProps) {
@@ -75,6 +77,7 @@ export default function Player({ ref }: PlayerProps) {
   // State refs - needed for methods called by YT player events (closure)
   const recListRef = useRef<SimilarTrack[]>([]);
   const recIDsRef = useRef<string[]>([]);
+  const recPayloadRef = useRef({});
   // Component state
   const [playerState, setPlayerState] = useState<PlayerState>(defaultPlayerState);
   const [recState, setRecState] = useState<RecState>(defaultRecState);
@@ -82,7 +85,8 @@ export default function Player({ ref }: PlayerProps) {
   useEffect(() => {
     recListRef.current = recState.similarList;
     recIDsRef.current = recState.listenedMbids;
-  }, [recState.similarList, recState.listenedMbids]);
+    recPayloadRef.current = recState.filtersPayload;
+  }, [recState.similarList, recState.listenedMbids, recState.filtersPayload]);
 
   // Load the YouTube iframe player on first mount
   useEffect(() => {
@@ -170,6 +174,7 @@ export default function Player({ ref }: PlayerProps) {
         isLoading: false, 
         similarList: data.similar_list, 
         stats: data.stats,
+        filtersPayload: payload
       }))
     }).catch(() => {
       setRecState(recState => ({...recState, isLoading:false}));
@@ -190,7 +195,8 @@ export default function Player({ ref }: PlayerProps) {
       setRecState(recState => ({...recState, isLoading: true}));
       const recommendPayload: RecommendRequest = {
         mbid: track.mbid,
-        listened_mbids: recIDsRef.current
+        listened_mbids: recIDsRef.current,
+        ...recPayloadRef.current
       };
       getRecommendations(recommendPayload).then(data => {
         console.log("Got recommendations:", data);
