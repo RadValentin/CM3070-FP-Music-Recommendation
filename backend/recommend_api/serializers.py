@@ -121,6 +121,30 @@ class RecommendFiltersSerializer(serializers.Serializer):
     genre_classification = serializers.ChoiceField(["rosamerica", "dortmund"], required=False)
 
 
+class RecommendFeatureWeightsSerializer(serializers.Serializer):
+    danceability = serializers.FloatField(required=False, min_value=0, max_value=1) 
+    aggressiveness = serializers.FloatField(required=False, min_value=0, max_value=1) 
+    happiness = serializers.FloatField(required=False, min_value=0, max_value=1) 
+    sadness = serializers.FloatField(required=False, min_value=0, max_value=1) 
+    relaxedness = serializers.FloatField(required=False, min_value=0, max_value=1) 
+    partyness = serializers.FloatField(required=False, min_value=0, max_value=1) 
+    acousticness = serializers.FloatField(required=False, min_value=0, max_value=1) 
+    electronicness = serializers.FloatField(required=False, min_value=0, max_value=1) 
+    instrumentalness = serializers.FloatField(required=False, min_value=0, max_value=1) 
+    tonality = serializers.FloatField(required=False, min_value=0, max_value=1) 
+    brightness = serializers.FloatField(required=False, min_value=0, max_value=1) 
+    moods_mirex_1 = serializers.FloatField(required=False, min_value=0, max_value=1) 
+    moods_mirex_2 = serializers.FloatField(required=False, min_value=0, max_value=1) 
+    moods_mirex_3 = serializers.FloatField(required=False, min_value=0, max_value=1) 
+    moods_mirex_4 = serializers.FloatField(required=False, min_value=0, max_value=1) 
+    moods_mirex_5 = serializers.FloatField(required=False, min_value=0, max_value=1) 
+
+
+class RecommendTotalWeightsSerializer(serializers.Serializer):
+    similarity = serializers.FloatField(required=False, min_value=0, max_value=1)
+    popularity = serializers.FloatField(required=False, min_value=0, max_value=1)
+
+
 class RecommendRequestSerializer(serializers.Serializer):
     mbid = serializers.CharField(
         help_text="MusicBrainz recording ID of the target track"
@@ -131,8 +155,8 @@ class RecommendRequestSerializer(serializers.Serializer):
         required=False
     )
     filters = RecommendFiltersSerializer(required=False)
-    feature_weights = serializers.DictField(child=serializers.FloatField(), required=False)
-    total_weights = serializers.DictField(child=serializers.FloatField(), required=False)
+    feature_weights = RecommendFeatureWeightsSerializer(required=False)
+    total_weights = RecommendTotalWeightsSerializer(required=False)
     limit = serializers.IntegerField(required=False)
 
 

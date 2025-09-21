@@ -57,6 +57,7 @@ def recommend(target_mbid, options=None):
     exclude_mbids = options.get("exclude_mbids", [])
     match_genre = options.get("match_genre", True)
     match_decade = options.get("match_decade", True)
+    feature_weights = options.get("feature_weights", {})
 
     # Identify the index, year and genre of the targeted track
     idxs = np.where(mbid_to_idx == target_mbid)[0]
@@ -88,10 +89,16 @@ def recommend(target_mbid, options=None):
         # always exclude the target
         mask &= ~np.isin(mbid_to_idx, [target_mbid])
 
+    # build a weight vector for the features, determines feature impact on similarity score
+    weights = np.ones(len(feature_names))
+    for i, name in enumerate(feature_names):
+        if name in feature_weights:
+            weights[i] = feature_weights[name]
+
     # the features we're comparing against, make sure to keep 2D shape
     query_vec = feature_matrix[target_index : target_index + 1]
     # filter EVERYTHING with the same mask, DO NOT rebind globals
-    fm = feature_matrix[mask]
+    fm = feature_matrix[mask] * weights
     mb = mbid_to_idx[mask]
     yrs = years[mask]
     gd = genre_dortmund[mask]

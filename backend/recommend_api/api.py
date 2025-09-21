@@ -251,7 +251,8 @@ class RecommendView(GenericAPIView):
                     "use_ros": use_ros, 
                     "exclude_mbids": listened_mbids,
                     "match_genre": same_genre,
-                    "match_decade": same_decade
+                    "match_decade": same_decade,
+                    "feature_weights": feature_weights,
                 }
             )
             top_tracks = recommendations["top_tracks"]

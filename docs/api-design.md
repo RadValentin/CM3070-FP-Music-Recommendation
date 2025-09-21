@@ -47,8 +47,22 @@
   },
   // how much each audio feature should impact the similarity score
   "feature_weights": {
-    "danceability": 0.5,
-    "aggressiveness": 0.5
+    "danceability": 0.0625,
+    "aggressiveness": 0.0625,
+    "happiness": 0.0625,
+    "sadness": 0.0625,
+    "relaxedness": 0.0625,
+    "partyness": 0.0625,
+    "acousticness": 0.0625,
+    "electronicness": 0.0625,
+    "instrumentalness": 0.0625,
+    "tonality": 0.0625,
+    "brightness": 0.0625,
+    "moods_mirex_1": 0.0625,
+    "moods_mirex_2": 0.0625,
+    "moods_mirex_3": 0.0625,
+    "moods_mirex_4": 0.0625,
+    "moods_mirex_5": 0.0625,
   },
   // how much similarity score should count vs track popularity in final scoring
   "total_weights": {
