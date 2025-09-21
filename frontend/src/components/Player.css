@@ -22,14 +22,14 @@
     height: 0;
   }
 
-  & .filters,
-  & .iframe,
-  & .recommendations {
+  & .player-filters,
+  & .player-iframe,
+  & .player-recommendations {
     flex: 1;
     overflow: auto;
   }
 
-  & .recommendations {
+  & .player-recommendations {
     padding: 1rem;
     
     & .heading {
@@ -49,9 +49,42 @@
   & .content {
     padding: 10px;
     display: flex;
-    gap: 2rem;
+    gap: 1rem;
     justify-content: space-between;
     align-items: center;
+
+    & .meta {
+      flex: 1;
+    }
+
+    & .coverart {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px;
+      height: 56px;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      background: #f3f3f3;
+
+      & > img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      & .image-fallback {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        font-weight: 700;
+        font-size: 1rem;
+        color: #666;
+      }
+    }
   }
 
   & .content .title {

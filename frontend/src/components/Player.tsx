@@ -2,8 +2,10 @@
 import React, { useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { Track, SimilarTrack, RecommendRequest } from "../types";
 import { getTrackSources, getRecommendations } from "../api.ts"
-import "./Player.css";
 import TrackItem from "./TrackItem.tsx";
+import Filters from "./Filters.tsx";
+import ImageLoader from "./ImageLoader.tsx";
+import "./Player.css";
 
 export interface PlayerRef {
   loadAndPlay: (track: Track) => void,
@@ -193,9 +195,14 @@ export default function Player({ ref }: PlayerProps) {
     const artists = track.artists?.map(a => a.name).join(", ") || "Unknown artist";
     const album = track.album?.name ?? null;
     const year = track.album?.date ? new Date(track.album.date).getFullYear() : null;
+    const artUrl = track.album?.links?.art ?? null
+    const fallbackText = track.title?.charAt(0)?.toUpperCase() ?? "♪"
 
     return (
       <div className="content">
+        <div className="coverart" aria-hidden="true">
+          <ImageLoader src={artUrl} alt="cover art" fallback={fallbackText} />
+        </div>
         <div className="meta">
           <div className="title" title={track.title}>{track.title}</div>
           <div className="artist-album">
@@ -232,7 +239,7 @@ export default function Player({ ref }: PlayerProps) {
     const otherRec = recState.similarList.slice(1);
 
     return (
-      <div className="recommendations">
+      <div className="player-recommendations">
         <div className="heading">Up Next:</div>
         <TrackItem key={firstRec.mbid} track={firstRec} onPlay={() => {playTrack(firstRec)}} />
         <div className="heading">Other recommendations:</div>
@@ -256,8 +263,10 @@ export default function Player({ ref }: PlayerProps) {
   return (
     <div className="player">
       <div className={overlayClass}>
-        <div className="filters"></div>
-        <div className="iframe" ref={containerRef}></div>
+        <div className="player-filters">
+          <Filters />
+        </div>
+        <div className="player-iframe" ref={containerRef}></div>
         {renderRecommendations()}
       </div>
       {playerState.track && renderContent()}

@@ -1,6 +1,6 @@
-import { useState } from "react";
-import "./TrackItem.css";
 import type { Track } from "../types";
+import ImageLoader from "./ImageLoader";
+import "./TrackItem.css";
 
 type TrackItemProps = {
   track: Track;
@@ -8,12 +8,11 @@ type TrackItemProps = {
 };
 
 export default function TrackItem({ track, onPlay }: TrackItemProps) {
-  const [imgError, setImgError] = useState(false);
-
   const artists = track.artists?.map(a => a.name).join(", ") || "Unknown artist";
   const album = track.album?.name ?? null;
   const year = track.album?.date ? new Date(track.album.date).getFullYear() : null;
-  const artUrl= track.album?.links?.art ?? null
+  const artUrl = track.album?.links?.art ?? null
+  const fallbackText = track.title?.charAt(0)?.toUpperCase() ?? "♪"
 
   return (
     <div
@@ -21,13 +20,7 @@ export default function TrackItem({ track, onPlay }: TrackItemProps) {
       aria-label={`${track.title} by ${artists}`}
     >
       <div className="coverart" aria-hidden="true">
-        {artUrl && !imgError ? (
-          <img src={artUrl} alt="" loading="lazy" onError={() => setImgError(true)} />
-        ) : (
-          <div className="coverart-fallback">
-            {track.title?.charAt(0)?.toUpperCase() ?? "♪"}
-          </div>
-        )}
+        <ImageLoader src={artUrl} alt="cover art" fallback={fallbackText} />
       </div>
 
       <div className="meta">
