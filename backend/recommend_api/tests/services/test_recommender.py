@@ -25,6 +25,7 @@ class RecommenderTests(SimpleTestCase):
         # Put A,B,C in same Rosamerica genre, D different
         rec.genre_rosamerica = np.array(['alt', 'alt', 'alt', 'roc'])
         rec.genre_dortmund = np.array(['metal', 'jazz', 'metal', 'metal'])
+        rec.feature_names = np.array(['danceability', 'aggressiveness', 'brightness'])
     
     def test_recommend_rosamerica(self):
         out = rec.recommend('A', options={"k":2, "use_ros":True})
