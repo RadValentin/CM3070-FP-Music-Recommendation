@@ -1,8 +1,12 @@
 import "./LoadingSpinner.css";
 
-export default function LoadingSpinner() {
+type LoadingSpinnerProps = {
+  theme?: "light" | "dark";
+};
+
+export default function LoadingSpinner({ theme = "dark" }: LoadingSpinnerProps) {
   return (
-    <div className="loading-spinner">
+    <div className={`loading-spinner ${theme}`}>
       <span className="spinner"></span>
     </div>
   );

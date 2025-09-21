@@ -2,12 +2,14 @@
 import { useState, useEffect } from "react";
 import "./Filters.css";
 
+export type FiltersPayload = {
+    filters?: any;
+    feature_weights?: any; 
+    total_weights?: any;
+}
+
 type FiltersProps = {
-    onChange: (payload: {
-      filters?: any;
-      feature_weights?: any; 
-      total_weights?: any;
-    }) => void;
+    onChange: (payload:FiltersPayload) => void;
 }
 
 const defaultFiltersState = {
@@ -18,7 +20,7 @@ const FEATURES = ["danceability", "aggressiveness", "happiness", "sadness", "rel
   "acousticness", "electronicness", "instrumentalness", "tonality", "brightness", "moods_mirex_1",
   "moods_mirex_2", "moods_mirex_3", "moods_mirex_4", "moods_mirex_5"];
 const defaultFeatureWeightsState = Object.fromEntries(
-  FEATURES.map(f => [f, 1])
+  FEATURES.map(f => [f, 0.5])
 );
 
 const defaultTotalWeightsState = {
@@ -52,9 +54,22 @@ export default function Filters({ onChange }: FiltersProps) {
   }
 
   const resetState = () => {
+    const isFiltersDefault = JSON.stringify(filters) === JSON.stringify(defaultFiltersState);
+    const isTotalWeightsDefault = JSON.stringify(totalWeights) === JSON.stringify(defaultTotalWeightsState);
+    const isFeatureWeightsDefault = JSON.stringify(featureWeights) === JSON.stringify(defaultFeatureWeightsState);
+
+    if (isFiltersDefault && isTotalWeightsDefault && isFeatureWeightsDefault) {
+      return;
+    }
+
     setFilters(defaultFiltersState);
     setTotalWeights(defaultTotalWeightsState);
     setFeatureWeights(defaultFeatureWeightsState);
+
+    // Trigger callback when weights reset, for filters it's automatically triggered
+    if (!isTotalWeightsDefault || !isFeatureWeightsDefault) {
+      setTimeout(handleChangeEnd, 0);
+    }
   };
 
   // When filters change, call the parent with updated payload
@@ -137,7 +152,7 @@ export default function Filters({ onChange }: FiltersProps) {
         <label key={feature_name}>
           <span>{feature_name}</span>
           <input 
-            className="slider" type="range" min={0} max={2} step={0.1}
+            className="slider" type="range" min={0} max={1} step={0.1}
             value={featureWeights[feature_name]}
             onChange={e => updateFeatureWeight(feature_name, parseFloat(e.target.value))}   
             onMouseUp={handleChangeEnd}

@@ -3,8 +3,9 @@ import React, { useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { Track, SimilarTrack, RecommendRequest } from "../types";
 import { getTrackSources, getRecommendations } from "../api.ts"
 import TrackItem from "./TrackItem.tsx";
-import Filters from "./Filters.tsx";
+import Filters, {type FiltersPayload} from "./Filters.tsx";
 import ImageLoader from "./ImageLoader.tsx";
+import LoadingSpinner from "./LoadingSpinner.tsx";
 import "./Player.css";
 
 export interface PlayerRef {
@@ -25,6 +26,7 @@ type PlayerState = {
 }
 
 type RecState = {
+  isLoading: boolean,
   similarList: SimilarTrack[],
   stats: any,
   listenedMbids: string[]
@@ -60,6 +62,7 @@ const defaultPlayerState: PlayerState = {
 };
 
 const defaultRecState: RecState = {
+  isLoading: false,
   similarList: [],
   stats: {},
   listenedMbids: []
@@ -147,6 +150,33 @@ export default function Player({ ref }: PlayerProps) {
     }
   }));
 
+  const onFiltersChange = (payload: FiltersPayload) => {
+    const track = playerState.track;
+
+    if (!track) {
+      return;
+    }
+
+    setRecState(recState => ({...recState, isLoading: true}));
+    const recommendPayload: RecommendRequest = {
+      mbid: track.mbid,
+      listened_mbids: recIDsRef.current,
+      ...payload
+    };
+    getRecommendations(recommendPayload).then(data => {
+      console.log("Got recommendations:", data);
+      setRecState(recState => ({
+        ...recState,
+        isLoading: false, 
+        similarList: data.similar_list, 
+        stats: data.stats,
+        listenedMbids: [track.mbid, ...recState.listenedMbids]
+      }))
+    }).catch(() => {
+      setRecState(recState => ({...recState, isLoading:false}));
+    });
+  };
+
   const playTrack = (track: Track) => {
     console.log("I've been told to play this track:", track);
     getTrackSources(track.mbid).then(sources => {
@@ -158,6 +188,7 @@ export default function Player({ ref }: PlayerProps) {
       iframeRef.current.loadVideoById({ videoId: sources[0].id });
       setPlayerState(playerState => ({ ...playerState, track, isMaximized: true }));
 
+      setRecState(recState => ({...recState, isLoading: true}));
       const recommendPayload: RecommendRequest = {
         mbid: track.mbid,
         listened_mbids: recIDsRef.current
@@ -165,11 +196,14 @@ export default function Player({ ref }: PlayerProps) {
       getRecommendations(recommendPayload).then(data => {
         console.log("Got recommendations:", data);
         setRecState(recState => ({
-          ...recState, 
+          ...recState,
+          isLoading: false, 
           similarList: data.similar_list, 
           stats: data.stats,
           listenedMbids: [track.mbid, ...recState.listenedMbids]
         }))
+      }).catch(() => {
+        setRecState(recState => ({...recState, isLoading:false}));
       });
     });
   };
@@ -219,6 +253,9 @@ export default function Player({ ref }: PlayerProps) {
               : <i className="fa-solid fa-play"></i>
             }
           </button>
+          <button type="button" className="button" aria-label="Next Track" onClick={() => { playTrack(recListRef.current[0]) }}>
+            <i className="fa-solid fa-forward"></i>
+          </button>
           <button type="button" className="button" aria-label="Minimize/Maximize" onClick={toggleMaximize}>
             { playerState.isMaximized 
               ? <i className="fa-solid fa-caret-down"></i> 
@@ -240,6 +277,7 @@ export default function Player({ ref }: PlayerProps) {
 
     return (
       <div className="player-recommendations">
+        {recState.isLoading && <LoadingSpinner />}
         <div className="heading">Up Next:</div>
         <TrackItem key={firstRec.mbid} track={firstRec} onPlay={() => {playTrack(firstRec)}} />
         <div className="heading">Other recommendations:</div>
@@ -264,7 +302,7 @@ export default function Player({ ref }: PlayerProps) {
     <div className="player">
       <div className={overlayClass}>
         <div className="player-filters">
-          <Filters onChange={(payload) => { console.log("Filters changed", payload) }} />
+          <Filters onChange={onFiltersChange} />
         </div>
         <div className="player-iframe" ref={containerRef}></div>
         {renderRecommendations()}

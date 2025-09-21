@@ -51,6 +51,7 @@
   }
 
   & .player-recommendations {
+    position: relative;
     padding: 1rem;
     
     & .heading {

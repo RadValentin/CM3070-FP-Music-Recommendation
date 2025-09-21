@@ -72,7 +72,7 @@ function App() {
 
   const renderContent = () => {
     if (isLoading) {
-      return <div className="content"><LoadingSpinner /></div>;
+      return <div className="content"><LoadingSpinner theme="light" /></div>;
     }
 
     if (results.status === "TOP") {
