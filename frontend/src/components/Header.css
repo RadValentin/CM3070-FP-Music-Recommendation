@@ -18,6 +18,7 @@
     letter-spacing: 1px;
     margin: 0;
     cursor: default;
+    text-shadow: 2px 2px #a13c2f;
   }
 
   & input {

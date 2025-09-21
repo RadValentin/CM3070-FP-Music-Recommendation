@@ -2,6 +2,23 @@
   position: relative;
   background-color: deepskyblue;
   height: 80px;
+  scrollbar-width: thin;
+  scrollbar-color: coral dodgerblue;
+
+  & ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  & ::-webkit-scrollbar-thumb {
+    background: coral;
+    border-radius: 4px;
+  }
+
+  & ::-webkit-scrollbar-track {
+    background: #e0f0ff;
+    border-radius: 4px;
+  }
 
   & .overlay {
     display: flex;
@@ -29,12 +46,17 @@
     overflow: auto;
   }
 
+  & .player-iframe {
+    align-self: center;
+  }
+
   & .player-recommendations {
     padding: 1rem;
     
     & .heading {
       color: white;
       font-weight: bold;
+      margin-bottom: .5rem;
     }
 
     & ul {

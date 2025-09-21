@@ -264,7 +264,7 @@ export default function Player({ ref }: PlayerProps) {
     <div className="player">
       <div className={overlayClass}>
         <div className="player-filters">
-          <Filters />
+          <Filters onChange={(payload) => { console.log("Filters changed", payload) }} />
         </div>
         <div className="player-iframe" ref={containerRef}></div>
         {renderRecommendations()}

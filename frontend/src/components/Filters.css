@@ -1,3 +1,27 @@
 .filters {
-  color: red;
+  padding: 1rem;
+  color: white;
+
+  & .heading {
+    color: white;
+    font-weight: bold;
+    margin: .5rem 0 .5rem;
+  }
+
+  & .heading:first-child {
+    margin-top: 0;
+  }
+
+  & label {
+    display: block;
+  }
+
+  & input {
+    margin: 0.5em 0;
+    accent-color: coral;
+  }
+
+  & .slider {
+    width: 100%;
+  }
 }
