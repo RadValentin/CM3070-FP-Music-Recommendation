@@ -1,4 +1,5 @@
-# mprof run ingest/debug_pipeline.py
+# mprof run python ingest/debug_pipeline.py --sample
+# mprof plot --flame
 import os
 import sys
 import django

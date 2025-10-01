@@ -1,8 +1,11 @@
+import uuid
 import re, os, orjson, json, tarfile
+import numpy as np
 import zstandard as zstd
 from collections import Counter, defaultdict
 from datetime import datetime, date
 from statistics import median_low
+from typing import NamedTuple
 
 mute_logs = False
 invalid_date_count = 0
@@ -19,6 +22,17 @@ MBID_REGEX = re.compile(
 
 MIN_YEAR = 1000
 
+# Fields that are audio features, stored in a Numpy array
+FEATURE_FIELDS = [
+    "danceability", "aggressiveness", "happiness", "sadness", "relaxedness", "partyness", 
+    "acousticness", "electronicness", "instrumentalness", "tonality", "brightness",
+]
+FEATURE_INDEX = {name: i for i, name in enumerate(FEATURE_FIELDS)}
+
+class AlbumInfo(NamedTuple):
+    album_id: str | None
+    album_name: str | None
+    release_date: str | None
 
 def is_mbid(s: str) -> bool:
     """
@@ -30,16 +44,16 @@ def is_mbid(s: str) -> bool:
     return bool(MBID_REGEX.match(s))
 
 
-def log(message):
+def log(message: str) -> None:
     global mute_logs
 
     if not mute_logs:
         print(message)
 
 
-def parse_flexible_date(date_str:str = None):
+def parse_flexible_date(date_str: str = None) -> str | None:
     """
-    Given a date as a string, try to extract its information as a datetime object
+    Given a date as a string, try to extract its information as a ISO date string
     """
     if not date_str or not isinstance(date_str, str):
         return None
@@ -80,11 +94,11 @@ def parse_flexible_date(date_str:str = None):
 
             # Fill in missing components manually
             if fmt == "%Y":
-                return datetime(dt.year, 1, 1).date()
+                return datetime(dt.year, 1, 1).date().isoformat()
             elif fmt == "%Y-%m":
-                return datetime(dt.year, dt.month, 1).date()
+                return datetime(dt.year, dt.month, 1).date().isoformat()
             else:
-                return dt.date()
+                return dt.date().isoformat()
         except ValueError:
             continue
 
@@ -98,12 +112,12 @@ def parse_flexible_date(date_str:str = None):
         if year < MIN_YEAR:
             return None
 
-        return datetime(year, month, day).date()
+        return datetime(year, month, day).date().isoformat()
     except Exception:
         return None
 
 
-def extract_artist_info(tags):
+def extract_artist_info(tags: dict) -> list[tuple[str, str]]:
     """
     Returns a list of tuples (artist_id, artist_name)
     """
@@ -133,7 +147,7 @@ def extract_artist_info(tags):
     return artists
 
 
-def extract_album_info(tags):
+def extract_album_info(tags: dict) -> AlbumInfo | None:
     """
     Returns a tuple (album_id, album_name, release_date)
     """
@@ -158,7 +172,7 @@ def extract_album_info(tags):
     return (album_id if is_mbid(album_id) else None, album_name, release_date)
 
 
-def extract_prob_vector(highlevel: dict, parent_key: str, order: list) -> list[float]:
+def extract_prob_vector(highlevel: dict, parent_key: str, order: list[str]) -> list[float]:
     """
     Extracts and normalizes a probability vector from a nested dict.
     - highlevel: source dictionary
@@ -171,10 +185,34 @@ def extract_prob_vector(highlevel: dict, parent_key: str, order: list) -> list[f
     s = sum(vec)
     return [x / s for x in vec] if s > 0 else vec
 
+# Stores extracted track information, more memory efficient than using a dict
+class TrackInfo:
+    __slots__ = ['album_info', 'artist_pairs', 'duration', 'genre_dortmund', 'genre_rosamerica', 
+                 'moods_mirex', 'musicbrainz_recordingid', 'numeric_features', 'title', 'submissions']
+    def __init__(self, album_info: AlbumInfo | None,
+                 artist_pairs: list[tuple[str, str]],
+                 duration: float,
+                 genre_dortmund: str,
+                 genre_rosamerica: str,
+                 moods_mirex: np.ndarray,
+                 musicbrainz_recordingid: bytes,
+                 numeric_features: np.ndarray,
+                 title: str,
+                 submissions: int = 0) -> None:
+        self.album_info = album_info
+        self.artist_pairs = artist_pairs
+        self.duration = duration
+        self.genre_dortmund = genre_dortmund
+        self.genre_rosamerica = genre_rosamerica
+        self.moods_mirex = moods_mirex
+        self.musicbrainz_recordingid = musicbrainz_recordingid
+        self.numeric_features = numeric_features
+        self.title = title
+        self.submissions = submissions
 
-def extract_data_from_json_str(json_str, file_path=None):
+def extract_data_from_json_str(json_str: str, file_path: str | None = None) -> TrackInfo | None:
     """
-    Returns a track dictionary with:
+    Returns a TrackInfo class containing:
     metadata - musicbrainz_recordingid, title, duration, etc.
     high-level features - danceability, aggressiveness, etc.
     artist_pairs - a list of tuples (artist_id, artist_name), the artists for the track
@@ -204,37 +242,43 @@ def extract_data_from_json_str(json_str, file_path=None):
         title = tags.get("title", [None])[0]
         if not title:
             raise ValueError("missing title")
+
+        # High-level features     
+        numeric_values = [
+            float(highlevel["danceability"]["all"]["danceable"]),
+            float(highlevel["mood_aggressive"]["all"]["aggressive"]),
+            float(highlevel["mood_happy"]["all"]["happy"]),
+            float(highlevel["mood_sad"]["all"]["sad"]),
+            float(highlevel["mood_relaxed"]["all"]["relaxed"]),
+            float(highlevel["mood_party"]["all"]["party"]),
+            float(highlevel["mood_acoustic"]["all"]["acoustic"]),
+            float(highlevel["mood_electronic"]["all"]["electronic"]),
+            float(highlevel["voice_instrumental"]["all"]["instrumental"]),
+            float(highlevel["tonal_atonal"]["all"]["tonal"]),
+            float(highlevel["timbre"]["all"]["bright"]),
+        ]
+        numeric_features = np.array(numeric_values, dtype=np.float32)
+        moods_mirex = np.asarray(
+            extract_prob_vector(highlevel, "moods_mirex", MIREX_ORDER),
+            dtype=np.float32
+        )
         
         # Create a new track entry using the data from JSON
-        track = {
+        return TrackInfo(
+            # Associate artists and album with the track
+            album_info = extract_album_info(tags=tags),
+            artist_pairs = extract_artist_info(tags=tags),
             # Required metadata
-            "musicbrainz_recordingid": mbid,
-            "title": title,
-            "duration": metadata["audio_properties"]["length"],
-            "genre_dortmund": highlevel["genre_dortmund"]["value"],
-            "genre_rosamerica": highlevel["genre_rosamerica"]["value"],
-            "file_path": os.path.normpath(file_path) if file_path else None,
-            # High-level features
-            "danceability": highlevel["danceability"]["all"]["danceable"],
-            "aggressiveness": highlevel["mood_aggressive"]["all"]["aggressive"],
-            "happiness": highlevel["mood_happy"]["all"]["happy"],
-            "sadness": highlevel["mood_sad"]["all"]["sad"],
-            "relaxedness": highlevel["mood_relaxed"]["all"]["relaxed"],
-            "partyness": highlevel["mood_party"]["all"]["party"],
-            "acousticness": highlevel["mood_acoustic"]["all"]["acoustic"],
-            "electronicness": highlevel["mood_electronic"]["all"]["electronic"],
-            "instrumentalness": highlevel["voice_instrumental"]["all"]["instrumental"],
-            "tonality": highlevel["tonal_atonal"]["all"]["tonal"],
-            "brightness": highlevel["timbre"]["all"]["bright"],
-            # Multi-dimensional features
-            "moods_mirex": extract_prob_vector(highlevel, "moods_mirex", MIREX_ORDER)
-        }
-
-        # Associate artists and album with the track
-        track["artist_pairs"] = extract_artist_info(tags=tags)
-        track["album_info"] = extract_album_info(tags=tags)
-
-        return track
+            musicbrainz_recordingid = uuid.UUID(mbid).bytes,
+            title = title,
+            duration = np.float32(metadata["audio_properties"]["length"] or np.nan),
+            # TODO: Store these as references to an enum instead of strings since we're 
+            # dealing with a small subset of values.
+            genre_dortmund = highlevel["genre_dortmund"]["value"],
+            genre_rosamerica = highlevel["genre_rosamerica"]["value"],
+            numeric_features = numeric_features,
+            moods_mirex = moods_mirex
+        )
 
     except (KeyError, IndexError, TypeError, ValueError) as ex:
         if file_path:
@@ -245,7 +289,7 @@ def extract_data_from_json_str(json_str, file_path=None):
         return None
 
 
-def merge_album_info(tracks):
+def merge_album_info(tracks: list[TrackInfo]) -> tuple[str, str, str] | None:
     """
     Given a list of duplicate tracks, merge album information by selecting most representative values:
     1) Pick the most common `album_id` across duplicates.
@@ -261,7 +305,7 @@ def merge_album_info(tracks):
     date_counter = defaultdict(list)
 
     for track in tracks:
-        album = track.get("album_info")
+        album = getattr(track, "album_info", None)
         if not album:
             continue
 
@@ -270,7 +314,7 @@ def merge_album_info(tracks):
             id_counter[album_id] += 1
         if album_name:
             name_counter[album_id].append(album_name)
-        if release_date and isinstance(release_date, date):
+        if release_date:
             date_counter[album_id].append(release_date)
     
     if not id_counter:
@@ -286,7 +330,7 @@ def merge_album_info(tracks):
     return (best_id, best_name, best_date)
 
 
-def merge_artist_pairs(tracks):
+def merge_artist_pairs(tracks: list[TrackInfo]) -> list[tuple[str, str]]:
     """
     Given a list of duplicate tracks, extract a list of tuples from each (artist_id, artist_name) 
     and merge the tracks by selecting the most common tuple combination.
@@ -294,7 +338,7 @@ def merge_artist_pairs(tracks):
     # Count each unique, sorted artist pair combination
     pair_counter = Counter()
     for track in tracks:
-        artist_pairs = track.get("artist_pairs")
+        artist_pairs = getattr(track, "artist_pairs", None)
         if artist_pairs:
             artist_pairs_sorted = tuple(sorted(artist_pairs, key=lambda tup: tup[0]))
             pair_counter[artist_pairs_sorted] += 1
@@ -307,23 +351,24 @@ def merge_artist_pairs(tracks):
     return list(most_common_pair)
 
 
-def merge_distribution(tracks, key):
+def merge_distribution(tracks: list[TrackInfo], key: str) -> np.ndarray:
     """
     Merge duplicate distributions (e.g. moods_mirex).
     Assumes all vectors under `key` have the same length.
     """
-    vecs = [t[key] for t in tracks if key in t and t[key]]
+    vecs = [getattr(t, key) for t in tracks if getattr(t, key, None) is not None]
     if not vecs:
-        return []
+        return np.array([])
 
-    length = len(vecs[0])
-    merged = [sum(v[i] for v in vecs) / len(vecs) for i in range(length)]
+    # Stack and average using numpy
+    arr = np.stack(vecs)
+    merged = np.mean(arr, axis=0)
 
-    s = sum(merged)
-    return [x / s for x in merged] if s > 0 else merged
+    s = np.sum(merged)
+    return merged / s if s > 0 else merged
 
 
-def process_file(json_path):
+def process_file(json_path: str) -> TrackInfo | None:
     """
     Utility function for loading and parsing individual JSON files in parallel
     """
@@ -353,11 +398,9 @@ def stream_json_from_tar_zst(path):
                             print(f"[WARN] Skipping {member.name}: {e}")
 
 
-def process_archive(archive_path):
-    results = []
+def iter_archive(archive_path: str):
     print(f"Loading {archive_path}", flush=True)
     for filename, raw_json in stream_json_from_tar_zst(archive_path):
         result = extract_data_from_json_str(raw_json, filename)
         if result:
-            results.append(result)
-    return results
+            yield result
