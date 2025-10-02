@@ -28,6 +28,7 @@ FEATURE_FIELDS = [
 ]
 FEATURE_INDEX = {name: i for i, name in enumerate(FEATURE_FIELDS)}
 
+
 class AlbumInfo(NamedTuple):
     album_id: str | None
     album_name: str | None
@@ -231,7 +232,7 @@ def extract_data_from_json_str(json_str: str, file_path: str | None = None) -> T
 
     try:
         data = orjson.loads(json_str)
-    except json.JSONDecodeError:
+    except orjson.JSONDecodeError:
         log(f"Bad JSON string")
         missing_data_count += 1
         return None
@@ -415,3 +416,4 @@ def iter_archive(archive_path: str):
         result = extract_data_from_json_str(raw_json, filename)
         if result:
             yield result
+            
