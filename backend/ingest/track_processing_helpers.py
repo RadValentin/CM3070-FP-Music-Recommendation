@@ -390,22 +390,24 @@ def process_file(json_path: str) -> TrackInfo | None:
         return None
 
 
-def stream_json_from_tar_zst(path):
+def stream_json_from_tar_zst(path: str, read_size=2*1024*1024):
     dctx = zstd.ZstdDecompressor()
-    with open(path, 'rb') as f:
-        with dctx.stream_reader(f) as stream:
-            with tarfile.open(fileobj=stream, mode='r|') as tar:
+    with open(path, "rb") as f:
+        with dctx.stream_reader(f, read_size=read_size) as stream:
+            with tarfile.open(fileobj=stream, mode="r|*") as tar:
                 for member in tar:
-                    if member.isfile() and member.name.endswith('.json'):
+                    if not (member.isfile() and member.name.endswith(".json")):
+                        continue
+                    try:
                         fileobj = tar.extractfile(member)
-                        if fileobj is None:
+                        if not fileobj:
+                            log(f"[WARN] Skipping {member.name}")
                             continue
-                        try:
-                            data = fileobj.read()
+                        with fileobj:
+                            data = fileobj.read().decode("utf-8", errors="replace")
                             yield member.name, data
-                        except Exception as e:
-                            print(f"[WARN] Skipping {member.name}: {e}")
-
+                    except Exception as e:
+                        log(f"[WARN] Failed {member.name}: {e}")                  
 
 def iter_archive(archive_path: str):
     print(f"Loading {archive_path}", flush=True)
