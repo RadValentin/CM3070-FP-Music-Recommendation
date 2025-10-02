@@ -1,0 +1,57 @@
+NOTE: THESE WERE RECORDED BEFORE INGEST RAM USAGE OPTIMIZATION
+
+SAMPLE
+
+Finished loading records into memory in 36.65s, now running the ORM inserts.
+Found 11,182 duplicate submissions.
+Found 1,459 submissions with invalid dates.
+Found 4 submissions with missing data.
+Dropped 3,082 tracks with no artist.
+Tracks with year=0: 1319 / 85732
+Inserted artists and albums in 0.58 seconds
+Will insert records in DB.....
+Inserted 85732 records in 14.88 seconds
+Inserted M2M pairings for TrackArtist and AlbumArtist in 6.68 seconds
+Exported feature matrix and indexes in 0.83 seconds
+
+
+ONE MILLION
+
+Finished loading records into memory in 306.98s, now running the ORM inserts.
+Found 298,870 duplicate submissions.
+Found 33,131 submissions with invalid dates.
+Found 602 submissions with missing data.
+Dropped 31,920 tracks with no artist.
+Tracks with year=0: 27791 / 668608
+Inserted artists and albums in 4.64 seconds
+Will insert records in DB..................................
+Inserted 668608 records in 120.01 seconds
+Inserted M2M pairings for TrackArtist and AlbumArtist in 62.31 seconds
+Exported feature matrix and indexes in 6.41 seconds
+
+
+FIVE MILLION
+
+Finished loading records into memory in 1466.37s, now running the ORM inserts.
+Found 2,615,660 duplicate submissions.
+Found 343,937 submissions with invalid dates.
+Found 69,696 submissions with missing data.
+Dropped 393,189 tracks with no artist.
+Tracks with year=0: 164219 / 1921455
+Inserted artists and albums in 18.87 seconds
+Will insert records in DB.................................................................................................
+Inserted 1921455 records in 925.15 seconds
+Inserted M2M pairings for TrackArtist and AlbumArtist in 798.21 seconds
+Exported feature matrix and indexes in 32.29 seconds
+
+Finished loading records into memory in 1318.11s, now running the ORM inserts.
+Found 2,615,660 duplicate submissions.
+Found 343,937 submissions with invalid dates.
+Found 69,696 submissions with missing data.
+Dropped 393,189 tracks with no artist.
+Tracks with year=0: 164219 / 1921455
+Inserted artists and albums in 18.11 seconds
+Will insert records in DB.................................................................................................
+Inserted 1921455 records in 393.29 seconds
+Inserted M2M pairings for TrackArtist and AlbumArtist in 314.37 seconds
+Exported feature matrix and indexes in 24.26 seconds

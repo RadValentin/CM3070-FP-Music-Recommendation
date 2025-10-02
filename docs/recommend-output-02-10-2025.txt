@@ -1,0 +1,89 @@
+NOTE: THESE WERE RECORDED BEFORE INGEST RAM USAGE OPTIMIZATION
+
+SAMPLE
+
+Feature matrix stats:
+Number of unique tracks: 85732
+Number of unique feature vectors: 85716
+Number of near-zero columns: 0
+Total number of columns: 16
+Cosine similarity search took 0.00100 seconds, compared against 3,290/85,732
+Tracks similar to: Metallica - Enter Sandman (1991) [electronic] [roc] [62c2e20a-559e-422f-a44c-9afa7882f0c4]:
+
+Recommendations:
+Artist               | Title                          | Year   | Dort   | Rosa | Sim   | Sub | Score | MBID
+-------------------------------------------------------------------------------------------------------------------------------------------
+Basil Poledouris     | The Contest                    | 1993   | electr | roc  | 0.955 |   2 | 0.969 | 6ec9f8c3-769a-4194-9fe9-bf71fcddf4a5
+Queen                | The Hero                       | 1994   | electr | roc  | 0.955 |   2 | 0.969 | fb4c5648-b686-4fda-9a91-d63fafe8f31a
+Stabbing Westward    | Shame                          | 1996   | electr | roc  | 0.994 |   1 | 0.964 | d4016854-750b-4404-b146-e177ad083c67
+Mika Bomb            | Super Sexy Razor Happy Girls   | 1999   | electr | roc  | 0.993 |   1 | 0.963 | 08104eeb-51ce-4930-a24a-e7e9847af86a
+Bon Jovi             | Woman in Love                  | 1992   | electr | roc  | 0.993 |   1 | 0.963 | bed34077-0202-4ac7-8b24-5858e8de6b95
+Die Toten Hosen      | In Dulci Jubilo                | 1998   | electr | roc  | 0.991 |   1 | 0.961 | 9a32af1a-ba59-4a4e-b3a0-f05e2267306c
+Guns N' Roses        | Bad Obsession                  | 1991   | electr | roc  | 0.986 |   1 | 0.957 | 5c6d9c76-f9cd-4711-9c0a-a9f1c1c89c16
+Sonic Youth          | 100% (LP version)              | 1992   | rock   | roc  | 0.982 |   1 | 0.953 | d4561919-ae4e-45a2-8014-4947f6766f61
+Melt-Banana          | Cannot                         | 1998   | rock   | roc  | 0.974 |   1 | 0.945 | 9d0d7efa-d9ea-4313-a2de-e7c7f1f6fac2
+Edguy                | No More Foolin'                | 1998   | electr | roc  | 0.971 |   1 | 0.943 | b24f22e7-b529-4f75-b048-bee1606884ef
+
+Stats for similarities:
+mean: 0.28865385618112327 std: 0.2722302307976997 p95: 0.6592137054553194 max: 0.9944677613804873
+Script execution took 0.14400 seconds
+
+
+ONE MILLION
+
+Feature matrix stats:
+Number of unique tracks: 668608
+Number of unique feature vectors: 668536
+Number of near-zero columns: 0
+Total number of columns: 16
+Cosine similarity search took 0.00600 seconds, compared against 36,164/668,608
+Tracks similar to: Metallica - Enter Sandman (1991) [electronic] [roc] [62c2e20a-559e-422f-a44c-9afa7882f0c4]:
+
+Recommendations:
+Artist               | Title                          | Year   | Dort   | Rosa | Sim   | Sub | Score | MBID
+-------------------------------------------------------------------------------------------------------------------------------------------
+Life of Agony        | Bad Seed                       | 1993   | electr | roc  | 0.999 |   3 | 1.037 | 1fee7b04-6aa8-447b-81f3-50874d495c87
+Judas Priest         | Abductors                      | 1997   | electr | roc  | 0.997 |   3 | 1.036 | 2799f2b5-7527-46c8-af81-07bb399e079d
+The Chills           | Part Past Part Fiction         | 1990   | electr | roc  | 0.999 |   2 | 1.009 | 36983009-9d50-4fb0-8dce-17ad3af9389a
+Anthrax              | Burst                          | 1993   | electr | roc  | 0.999 |   2 | 1.009 | 49863b15-0d64-4bc6-85e4-f386cb0b91a6
+Kristin Hersh        | Like You                       | 1998   | electr | roc  | 0.999 |   2 | 1.009 | 1a4004e6-2cc1-4c27-88a4-7e351a45fb2a
+HammerFall           | Dreamland                      | 1998   | electr | roc  | 0.999 |   2 | 1.009 | 8ef679e3-6e66-4893-a27c-5f530067dafb
+Blind Guardian       | Lord of the Rings              | 1991   | electr | roc  | 0.998 |   2 | 1.008 | 08479354-d37f-41f1-aa13-a65303ad2883
+Elton John           | Saturday Night's Alright for F | 1990   | electr | roc  | 0.998 |   2 | 1.008 | 91fab35d-a9f7-45ce-a8c8-82a67fa6b990
+Death                | Within the Mind                | 1990   | electr | roc  | 0.998 |   2 | 1.008 | 3f498890-4034-4835-8f75-c0a23feabf45
+Pain of Salvation    | Stress                         | 1998   | electr | roc  | 0.998 |   2 | 1.008 | 259c6473-6dee-409a-aad1-0fbf2173fcb8
+
+Stats for similarities:
+mean: 0.19813593037318708 std: 0.5330009801659772 p95: 0.977303157005481 max: 0.9993133706915018
+Script execution took 0.89900 seconds
+
+
+FIVE MILLION
+
+Feature matrix stats:
+Number of unique tracks: 1921455
+Number of unique feature vectors: 1920662
+Number of near-zero columns: 0
+Total number of columns: 16
+Cosine similarity search took 0.00900 seconds, compared against 79,457/1,921,455
+Tracks similar to: Metallica - Enter Sandman (1991) [electronic] [roc] [62c2e20a-559e-422f-a44c-9afa7882f0c4]:
+
+Recommendations:
+Artist               | Title                          | Year   | Dort   | Rosa | Sim   | Sub | Score | MBID
+-------------------------------------------------------------------------------------------------------------------------------------------
+Metallica            | Don't Tread on Me              | 1991   | electr | roc  | 0.933 |  40 | 1.211 | 9420c245-10aa-43bf-a583-08f0219e5666
+Tool                 | Sweat                          | 1992   | electr | roc  | 0.933 |  22 | 1.153 | 37f12582-e0aa-4f53-bb2e-d1527e8f2299
+David Bowie          | The Pretty Things Are Going to | 1999   | electr | roc  | 0.922 |  19 | 1.129 | 0894f9f4-61fe-41cf-ba9a-8a952b467d53
+Die Toten Hosen      | Sexual                         | 1994   | electr | roc  | 0.932 |  12 | 1.095 | f2cf1e39-9653-4587-b56e-c3b1d4ae37ff
+Fear Factory         | Obsolete                       | 1998   | electr | roc  | 0.916 |  11 | 1.073 | e998c1c3-974a-4540-8876-d83d0daf2a1b
+Mayhem               | The Vortex Void of Inhumanity  | 1997   | electr | roc  | 0.966 |   5 | 1.048 | 410a3908-2db9-4826-8f07-a4e257c3d10d
+Clawfinger           | Don't Wake Me Up               | 1997   | electr | roc  | 0.931 |   7 | 1.046 | 7b0b02f3-bed7-4282-b438-2a8812799774
+The Verve Pipe       | Myself                         | 1996   | electr | roc  | 0.916 |   8 | 1.044 | 249b6b05-3d4e-4af6-be82-48f32d34da60
+Silverchair & Vitro  | Spawn                          | 1997   | electr | roc  | 0.916 |   8 | 1.044 | 8a3435cf-c771-4a0c-a077-64786e8307a6
+Alannah Myles        | Lies and Rumours               | 1992   | electr | roc  | 0.941 |   6 | 1.042 | 235001d2-1d71-44e9-beae-3425eea45ec5
+
+Stats for similarities:
+mean: 0.4038275396654951 std: 0.3163010209365433 p95: 0.8051800501021479 max: 0.9930822436112471
+Script execution took 2.69988 seconds
+
+

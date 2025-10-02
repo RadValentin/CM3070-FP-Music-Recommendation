@@ -1,0 +1,13 @@
+SAMPLE
+
+Finished loading records into memory in 33.06s, now running the ORM inserts.
+Found 11,182 duplicate submissions.
+Found 1,459 submissions with invalid dates.
+Found 4 submissions with missing data.
+Dropped 3,082 tracks with no artist.
+Tracks with year=0: 1319 / 85732
+Inserted artists and albums in 0.55 seconds
+Will insert records in DB.....
+Inserted 85732 records in 12.70 seconds
+Inserted M2M pairings for TrackArtist and AlbumArtist in 7.37 seconds
+Exported feature matrix and indexes in 0.84 seconds
