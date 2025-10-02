@@ -33,14 +33,24 @@ class AlbumInfo(NamedTuple):
     album_name: str | None
     release_date: str | None
 
+
 def is_mbid(s: str) -> bool:
     """
     Check if a string is a valid 36 character MBID
     Link: https://musicbrainz.org/doc/MusicBrainz_Identifier
     """
-    if not s:
+    if not s or not isinstance(s, str):
         return False
-    return bool(MBID_REGEX.match(s))
+
+    mbid_string = s.strip()
+    if not MBID_REGEX.match(mbid_string):
+        return False
+    try:
+        # raises ValueError if not valid hex
+        uuid.UUID(mbid_string)
+        return True
+    except ValueError:
+        return False
 
 
 def log(message: str) -> None:
