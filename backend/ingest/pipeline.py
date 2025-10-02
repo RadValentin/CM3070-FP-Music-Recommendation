@@ -1,6 +1,6 @@
 # Data Processing for Music Recommendation System
 from datetime import date
-import os, time, gc, copy
+import os, time, gc, copy, uuid
 import numpy as np
 import pandas as pd
 from . import track_processing_helpers as tph
@@ -13,7 +13,7 @@ from pathlib import Path
 from sklearn.preprocessing import StandardScaler
 from recommend_api.models import Track, Artist, TrackArtist, Album, AlbumArtist
 from pympler import asizeof
-from typing import DefaultDict, List
+from typing import DefaultDict, List, Set, Tuple
 
 
 def ingest_parsed_track(result: tph.TrackInfo, track_index, counters):
@@ -117,6 +117,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     size_index = asizeof.asizeof(track_index)
     first_list = next(iter(track_index.values()))
     size_track = asizeof.asizeof(first_list[0])
+    print("")
     print(f"Size of track_index: {size_index:,} bytes ({size_index / 1024**2:.2f} MB)")
     print(f"Size of a track: {size_track:,} bytes ({size_track / 1024:.2f} KB)")
 
@@ -184,7 +185,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
 
     album_index = {}  # keep track of unique album names, indexed by MBID
     artist_index = defaultdict(list)  # keep track of unique artist names, indexed by MBID
-    trackartist_set = set() # set of all Track-Artist M2M pairings, to avoid duplication
+    trackartist_set: Set[Tuple[bytes, str]] = set() # set of all Track-Artist M2M pairings, to avoid duplication
     albumartist_set = set()  # set of all Album-Artist M2M pairings
     track_features_list = []  # list of feature values for each track
     track_list: List[Track] = [] # ORM Track objects
@@ -198,7 +199,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         album_info = track.album_info
 
         track_obj = Track(
-            musicbrainz_recordingid=str(track.musicbrainz_recordingid),
+            musicbrainz_recordingid=uuid.UUID(bytes=track.musicbrainz_recordingid),
             title=track.title,
             duration=track.duration,
             genre_dortmund=track.genre_dortmund,
@@ -250,7 +251,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
 
         track_features_list.append(
             [
-                str(track.musicbrainz_recordingid),
+                str(uuid.UUID(bytes=track.musicbrainz_recordingid)),
                 track.genre_dortmund,
                 track.genre_rosamerica,
                 year # release year
@@ -275,8 +276,8 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     ## NOTE: Phase 4 - Insert data into DB
 
     with transaction.atomic():
-        # with connection.cursor() as c:
-        #     c.execute("SET LOCAL synchronous_commit = OFF;")
+        with connection.cursor() as c:
+            c.execute("SET LOCAL synchronous_commit = OFF;")
 
         start = time.time()
         BATCH_SIZE = 20000
@@ -288,6 +289,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
             merged_artist_index[artist_id] = Artist(
                 musicbrainz_artistid=artist_id, name=merged_name
             )
+        del artist_index
         Album.objects.bulk_create(album_index.values(), batch_size=BATCH_SIZE)
         Artist.objects.bulk_create(merged_artist_index.values(), batch_size=BATCH_SIZE)
         end = time.time()
@@ -304,14 +306,16 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
 
         end = time.time()
         print(f"\nInserted {len(track_list)} records in {end - start:.2f} seconds")
+        del track_list
 
         start = time.time()
         # M2M pairing were stored as sets to avoid duplication, convert them to lists and create objects.
-        trackartist_list = []
+        trackartist_list: List[TrackArtist] = []
         for track_id, artist_id in trackartist_set:
             trackartist_list.append(
-                TrackArtist(artist=merged_artist_index[artist_id], track_id=track_id)
+                TrackArtist(artist=merged_artist_index[artist_id], track_id=uuid.UUID(bytes=track_id))
             )
+        del trackartist_set
 
         albumartist_list = []
         for album_id, artist_id in albumartist_set:
@@ -321,6 +325,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
             albumartist_list.append(
                 AlbumArtist(artist=merged_artist_index[artist_id], album=album)
             )
+        del albumartist_set
 
         for i in range(0, len(trackartist_list), BATCH_SIZE):
             TrackArtist.objects.bulk_create(trackartist_list[i:i+BATCH_SIZE], batch_size=BATCH_SIZE)
@@ -330,6 +335,10 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
 
         end = time.time()
         print(f"Inserted M2M pairings for TrackArtist and AlbumArtist in {end - start:.2f} seconds")
+        del trackartist_list
+        del albumartist_list
+        del album_index
+        del merged_artist_index
 
     ## NOTE: Phase 5 - Save data about audio features into vector files
 
