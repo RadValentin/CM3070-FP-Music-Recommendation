@@ -120,12 +120,14 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     print("")
     print(f"Size of track_index: {size_index:,} bytes ({size_index / 1024**2:.2f} MB)")
     print(f"Size of a track: {size_track:,} bytes ({size_track / 1024:.2f} KB)")
+    end = time.time()
+    print(f"Finished loading JSON files in {end - start:.2f}s")
 
     ## NOTE: Phase 2 - Merge duplicate entries for tracks by selecting the most common value for each field
     ## The goal is to have the most representative values for each feature among the duplicates of a track.
 
     print("Will merge duplicate tracks.", flush=True)
-
+    start = time.time()
 
     # Categorical fields for which we'll select the most common value between duplicates
     CAT_FIELDS = ["title", "genre_dortmund", "genre_rosamerica"]
@@ -179,9 +181,13 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         track_index[mbid] = [base_track]
         del tracks
 
+    end = time.time()
+    print(f"Finished merging tracks in {end - start:.2f}s")
+
     ## NOTE: Phase 3 - Build the DB models
 
     print("Will build DB models.")
+    start = time.time()
 
     album_index = {}  # keep track of unique album names, indexed by MBID
     artist_index = defaultdict(list)  # keep track of unique artist names, indexed by MBID
@@ -261,17 +267,16 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         )
     del track_index
     gc.collect()
-    end = time.time()
 
-    print(
-        f"Finished loading records into memory in {end - start:.2f}s, now running the ORM inserts."
-    )
+    end = time.time()
+    print(f"Built Track models in {end - start:.2f}s, now running the ORM inserts.")
     print(f"Found {counters["duplicates"]:,} duplicate submissions.")
     print(f"Found {tph.invalid_date_count:,} submissions with invalid dates.")
     print(f"Found {tph.missing_data_count:,} submissions with missing data.")
     print(f"Dropped {counters["missing_artist"]:,} tracks with no artist.")
     zero_year_count = sum(row[3] == 0 for row in track_features_list)
     print(f"Tracks with year=0: {zero_year_count} / {len(track_features_list)}")
+
 
     ## NOTE: Phase 4 - Insert data into DB
 
@@ -293,10 +298,10 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         Album.objects.bulk_create(album_index.values(), batch_size=BATCH_SIZE)
         Artist.objects.bulk_create(merged_artist_index.values(), batch_size=BATCH_SIZE)
         end = time.time()
-        print(f"Inserted artists and albums in {end - start:.2f} seconds")
+        print(f"Inserted Artists and Albums in {end - start:.2f} seconds")
 
         start = time.time()
-        print("Will insert records in DB", end="", flush=True)
+        print("Will insert Tracks in DB", end="", flush=True)
 
         for i in range(0, len(track_list), BATCH_SIZE):
             Track.objects.bulk_create(
@@ -305,7 +310,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
             print(".", end="", flush=True)
 
         end = time.time()
-        print(f"\nInserted {len(track_list)} records in {end - start:.2f} seconds")
+        print(f"\nInserted {len(track_list)} Tracks in {end - start:.2f} seconds")
         del track_list
 
         start = time.time()
