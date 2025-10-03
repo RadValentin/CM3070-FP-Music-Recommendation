@@ -4,9 +4,9 @@ from ingest.track_processing_helpers import merge_artist_pairs
 
 class MergeArtistPairsTests(SimpleTestCase):
     def test_picks_most_common_whole_config(self):
-        A = [("a1", "Metallica"), ("a2", "Megadeth")]
-        B = [("a1", "Metallica")]
-        C = [("a2", "Megadeth"), ("a1", "Metallica")]  # same as A after normalization
+        A = [["a1", "Metallica"], ["a2", "Megadeth"]]
+        B = [["a1", "Metallica"]]
+        C = [["a2", "Megadeth"], ["a1", "Metallica"]]  # same as A after normalization
 
         tracks = [
             {"artist_pairs": A},

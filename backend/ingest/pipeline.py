@@ -32,6 +32,8 @@ def ingest_parsed_track(result: dict, track_index: LMDBTrackIndex, counters):
 
 
 def build_database(use_sample: bool, show_log: bool, num_parts: int = None, parts_list: list = None):
+    # Size of on-disk track index, set an arbitrary default 2GB
+    MAP_SIZE = 1024 * 1024 * 1024 * 2
     WORKERS = max(8, (os.cpu_count() or 8))
     BASE_DIR = Path(__file__).resolve().parent.parent
     config = dotenv_values(BASE_DIR / ".env")
@@ -96,9 +98,11 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
                     else:
                         print(f"Non-JSON file skipped: {name}")
 
+        MAP_SIZE = len(parts_dirs) * 2 * 1024 * 1024 * 1024 # 2GB per 1M files
         # json_paths = json_paths[0:1000] # use only a subset of the data, for debugging
         print(f"Will load {len(json_paths):,} records", end="", flush=True)
     else:
+        MAP_SIZE = len(archive_paths) * 2 * 1024 * 1024 * 1024 # 2GB per archive
         print(f"Will load records from archives", flush=True)
 
     # keep track of unique track data, indexed by MBID
@@ -106,7 +110,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     if os.path.exists(lmdb_dir):
         shutil.rmtree(lmdb_dir)
     os.makedirs(lmdb_dir, exist_ok=True)
-    track_index = LMDBTrackIndex(lmdb_dir)
+    track_index = LMDBTrackIndex(lmdb_dir, map_size=MAP_SIZE)
 
     with ThreadPoolExecutor(max_workers=WORKERS) as executor:
         # Process file-by-file (individual JSONs)
@@ -122,8 +126,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     # Ensure transactions are committed to store
     track_index.flush()
 
-    stat = track_index.env.stat()
-    size_index = stat["psize"] * stat["entries"]
+    size_index = track_index.size()
     first_key = next(iter(track_index.keys()))
     first_list = track_index[first_key]
     first_track = first_list[0]
@@ -147,7 +150,9 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         f"{field}_{i+1}" for field, order in VEC_FIELDS for i in range(len(order))
     ]
 
-    for mbid, tracks in track_index.items():
+    for mbid in track_index.keys():
+        tracks = track_index.get(mbid)
+
         if not tracks:
             track_index[mbid] = None
             continue
@@ -157,7 +162,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
 
         # NUMERIC: aggregate with median (robust)
         durations = [t["duration"] for t in tracks if t.get("duration", None) is not None]
-        base_track["duration"] = np.median(durations).tolist()
+        base_track["duration"] = float(np.median(durations)) if durations else 0.0
 
         num_vecs = [t["numeric_features"] for t in tracks if t.get("numeric_features", None) is not None]
         base_track["numeric_features"] = (

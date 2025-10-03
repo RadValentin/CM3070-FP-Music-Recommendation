@@ -277,7 +277,7 @@ def merge_album_info(tracks: list[dict]) -> tuple[str, str, str] | None:
     2) Among entries with that `album_id`, pick most common name.
     3) For date, pick the median date (robust to outliers).
 
-    `tracks: list[dict]` where each dict has `"album_info": (album_id, album_name, release_date)`
+    `tracks: list[dict]` where each dict has `"album_info": [album_id, album_name, release_date]`
 
     Returns: (album_id, album_name, release_date) or None
     """
@@ -289,8 +289,8 @@ def merge_album_info(tracks: list[dict]) -> tuple[str, str, str] | None:
         album = track.get("album_info", None)
         if not album:
             continue
-
-        album_id, album_name, release_date = album
+        album_tuple = tuple(album)
+        album_id, album_name, release_date = album_tuple
         if album_id:
             id_counter[album_id] += 1
         if album_name:
@@ -321,7 +321,9 @@ def merge_artist_pairs(tracks: list[dict]) -> list[tuple[str, str]]:
     for track in tracks:
         artist_pairs = track.get("artist_pairs", None)
         if artist_pairs:
-            artist_pairs_sorted = tuple(sorted(artist_pairs, key=lambda tup: tup[0]))
+            # Convert each inner list to tuple for hashing
+            artist_pairs_tuples = [tuple(pair) for pair in artist_pairs]
+            artist_pairs_sorted = tuple(sorted(artist_pairs_tuples, key=lambda tup: tup[0]))
             pair_counter[artist_pairs_sorted] += 1
 
     if not pair_counter:

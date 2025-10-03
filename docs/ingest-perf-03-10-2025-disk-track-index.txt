@@ -1,0 +1,61 @@
+SAMPLE
+
+Size of track_index: 363,782,144 bytes (346.93 MB)
+Size of a track: 2,424 bytes (2.37 KB)
+Finished loading JSON files in 16.81s
+Will merge duplicate tracks.
+Finished merging tracks in 9.87s
+Will build DB models.
+Built Track models in 2.11s, now running the ORM inserts.
+Found 11,182 duplicate submissions.
+Found 1,459 submissions with invalid dates.
+Found 4 submissions with missing data.
+Dropped 3,082 tracks with no artist.
+Tracks with year=0: 1319 / 85732
+Inserted Artists and Albums in 0.48 seconds
+Will insert Tracks in DB.....
+Inserted 85732 Tracks in 10.52 seconds
+Inserted M2M pairings for TrackArtist and AlbumArtist in 6.89 seconds
+Exported feature matrix and indexes in 0.78 seconds
+
+
+ONE MILLION
+
+Size of track_index: 2,869,362,688 bytes (2736.44 MB)
+Size of a track: 2,384 bytes (2.33 KB)
+Finished loading JSON files in 151.11s
+Will merge duplicate tracks.
+Finished merging tracks in 82.13s
+Will build DB models.
+Built Track models in 18.29s, now running the ORM inserts.
+Found 298,870 duplicate submissions.
+Found 33,131 submissions with invalid dates.
+Found 602 submissions with missing data.
+Dropped 31,920 tracks with no artist.
+Tracks with year=0: 27791 / 668608
+Inserted Artists and Albums in 7.64 seconds
+Will insert Tracks in DB...
+Inserted 668608 Tracks in 102.78 seconds
+Inserted M2M pairings for TrackArtist and AlbumArtist in 63.75 seconds
+Exported feature matrix and indexes in 6.13 seconds
+
+
+FIVE MILLION
+
+Size of track_index: 9,480,716,288 bytes (9041.52 MB)
+Size of a track: 2,264 bytes (2.21 KB)
+Finished loading JSON files in 772.50s
+Will merge duplicate tracks.
+Finished merging tracks in 276.37s
+Will build DB models.
+Built Track models in 51.86s, now running the ORM inserts.
+Found 2,615,676 duplicate submissions.
+Found 343,937 submissions with invalid dates.
+Found 69,696 submissions with missing data.
+Dropped 393,189 tracks with no artist.
+Tracks with year=0: 164219 / 1921439
+Inserted Artists and Albums in 18.44 seconds
+Will insert Tracks in DB...
+Inserted 1921439 Tracks in 307.06 seconds
+Inserted M2M pairings for TrackArtist and AlbumArtist in 218.41 seconds
+Exported feature matrix and indexes in 17.88 seconds

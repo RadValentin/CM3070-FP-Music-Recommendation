@@ -2,8 +2,6 @@ import lmdb
 import orjson
 import uuid
 
-MAP_SIZE = 1024 * 1024 * 1024 * 2  # 2GB
-
 def mbid_bytes(m: str) -> bytes:
     return uuid.UUID(m).bytes
 
@@ -11,39 +9,33 @@ def mbid_str(b: bytes) -> str:
     return str(uuid.UUID(bytes=b))
 
 class LMDBTrackIndex:
-    def __init__(self, path, map_size=MAP_SIZE, batch=10_000):
+    def __init__(self, path, map_size=1024 * 1024 * 1024 * 2, batch=10_000):
         self.env = lmdb.open(
-            path, map_size=map_size, subdir=True,
-            writemap=True, max_dbs=1, lock=True
+            path, map_size=map_size, subdir=True, max_dbs=2,
+            lock=True, writemap=True,
+            map_async=True,
+            metasync=False,
+            sync=False,
+            readahead=True,   
         )
         self.db = self.env.open_db(b"main")
-        self._txn = None
-        self._n = 0
-        self._batch = batch
 
     def append(self, key: str, value):
-        if self._txn is None:
-            self._txn = self.env.begin(write=True, db=self.db)
-            self._n = 0
-
         key_bytes = mbid_bytes(key)
-        current = self._txn.get(key_bytes, db=self.db)
-        if current:
-            lst = orjson.loads(current)
-            lst.append(value)
-        else:
-            lst = [value]
-        self._txn.put(key_bytes, orjson.dumps(lst), db=self.db)
-        self._n += 1
-        if self._n >= self._batch:
-            self._txn.commit()
-            self._txn = None
+        with self.env.begin(write=True, db=self.db) as txn:
+            current = txn.get(key_bytes)
+            if current:
+                lst = orjson.loads(current)
+                lst.append(value)
+            else:
+                lst = [value]
+            txn.put(key_bytes, orjson.dumps(lst), db=self.db)
 
     def __setitem__(self, key: str, values):
         key_bytes = mbid_bytes(key)
         if values is None:
-            with self.env.begin(write=True) as txn:
-                txn.delete(key_bytes, db=self.db)
+            with self.env.begin(write=True, db=self.db) as txn:
+                txn.delete(key_bytes)
             return
         if not isinstance(values, list):
             raise ValueError("Value must be a list")
@@ -82,10 +74,14 @@ class LMDBTrackIndex:
                     yield orjson.loads(value)
 
     def flush(self):
-        if self._txn is not None:
-            self._txn.commit()
-            self._txn = None
         self.env.sync()
 
     def close(self):
+        self.flush()
         self.env.close()
+
+    def size(self):
+        with self.env.begin(db=self.db) as txn:
+            entries = txn.stat()["entries"]
+            psize = txn.stat()["psize"]
+            return psize * entries
