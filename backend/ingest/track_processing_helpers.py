@@ -194,33 +194,9 @@ def extract_prob_vector(highlevel: dict, parent_key: str, order: list[str]) -> l
     vec = [float(probs.get(key, 0.0)) for key in order]
     s = sum(vec)
     return [x / s for x in vec] if s > 0 else vec
+    
 
-# Stores extracted track information, more memory efficient than using a dict
-class TrackInfo:
-    __slots__ = ['album_info', 'artist_pairs', 'duration', 'genre_dortmund', 'genre_rosamerica', 
-                 'moods_mirex', 'musicbrainz_recordingid', 'numeric_features', 'title', 'submissions']
-    def __init__(self, album_info: AlbumInfo | None,
-                 artist_pairs: list[tuple[str, str]],
-                 duration: float,
-                 genre_dortmund: str,
-                 genre_rosamerica: str,
-                 moods_mirex: np.ndarray,
-                 musicbrainz_recordingid: bytes,
-                 numeric_features: np.ndarray,
-                 title: str,
-                 submissions: int = 0) -> None:
-        self.album_info = album_info
-        self.artist_pairs = artist_pairs
-        self.duration = duration
-        self.genre_dortmund = genre_dortmund
-        self.genre_rosamerica = genre_rosamerica
-        self.moods_mirex = moods_mirex
-        self.musicbrainz_recordingid = musicbrainz_recordingid
-        self.numeric_features = numeric_features
-        self.title = title
-        self.submissions = submissions
-
-def extract_data_from_json_str(json_str: str, file_path: str | None = None) -> TrackInfo | None:
+def extract_data_from_json_str(json_str: str, file_path: str | None = None) -> dict | None:
     """
     Returns a TrackInfo class containing:
     metadata - musicbrainz_recordingid, title, duration, etc.
@@ -254,7 +230,7 @@ def extract_data_from_json_str(json_str: str, file_path: str | None = None) -> T
             raise ValueError("missing title")
 
         # High-level features     
-        numeric_values = [
+        numeric_features = [
             float(highlevel["danceability"]["all"]["danceable"]),
             float(highlevel["mood_aggressive"]["all"]["aggressive"]),
             float(highlevel["mood_happy"]["all"]["happy"]),
@@ -267,28 +243,23 @@ def extract_data_from_json_str(json_str: str, file_path: str | None = None) -> T
             float(highlevel["tonal_atonal"]["all"]["tonal"]),
             float(highlevel["timbre"]["all"]["bright"]),
         ]
-        numeric_features = np.array(numeric_values, dtype=np.float32)
-        moods_mirex = np.asarray(
-            extract_prob_vector(highlevel, "moods_mirex", MIREX_ORDER),
-            dtype=np.float32
-        )
         
         # Create a new track entry using the data from JSON
-        return TrackInfo(
+        return {
             # Associate artists and album with the track
-            album_info = extract_album_info(tags=tags),
-            artist_pairs = extract_artist_info(tags=tags),
+            "album_info": extract_album_info(tags),
+            "artist_pairs": extract_artist_info(tags),
             # Required metadata
-            musicbrainz_recordingid = uuid.UUID(mbid).bytes,
-            title = title,
-            duration = np.float32(metadata["audio_properties"]["length"] or np.nan),
+            "musicbrainz_recordingid": str(uuid.UUID(mbid)),
+            "title": title,
+            "duration": float(metadata["audio_properties"]["length"] or 0),
             # TODO: Store these as references to an enum instead of strings since we're 
             # dealing with a small subset of values.
-            genre_dortmund = highlevel["genre_dortmund"]["value"],
-            genre_rosamerica = highlevel["genre_rosamerica"]["value"],
-            numeric_features = numeric_features,
-            moods_mirex = moods_mirex
-        )
+            "genre_dortmund": highlevel["genre_dortmund"]["value"],
+            "genre_rosamerica": highlevel["genre_rosamerica"]["value"],
+            "numeric_features": numeric_features,
+            "moods_mirex": extract_prob_vector(highlevel, "moods_mirex", MIREX_ORDER)
+        }
 
     except (KeyError, IndexError, TypeError, ValueError) as ex:
         if file_path:
@@ -299,7 +270,7 @@ def extract_data_from_json_str(json_str: str, file_path: str | None = None) -> T
         return None
 
 
-def merge_album_info(tracks: list[TrackInfo]) -> tuple[str, str, str] | None:
+def merge_album_info(tracks: list[dict]) -> tuple[str, str, str] | None:
     """
     Given a list of duplicate tracks, merge album information by selecting most representative values:
     1) Pick the most common `album_id` across duplicates.
@@ -315,7 +286,7 @@ def merge_album_info(tracks: list[TrackInfo]) -> tuple[str, str, str] | None:
     date_counter = defaultdict(list)
 
     for track in tracks:
-        album = getattr(track, "album_info", None)
+        album = track.get("album_info", None)
         if not album:
             continue
 
@@ -340,7 +311,7 @@ def merge_album_info(tracks: list[TrackInfo]) -> tuple[str, str, str] | None:
     return (best_id, best_name, best_date)
 
 
-def merge_artist_pairs(tracks: list[TrackInfo]) -> list[tuple[str, str]]:
+def merge_artist_pairs(tracks: list[dict]) -> list[tuple[str, str]]:
     """
     Given a list of duplicate tracks, extract a list of tuples from each (artist_id, artist_name) 
     and merge the tracks by selecting the most common tuple combination.
@@ -348,7 +319,7 @@ def merge_artist_pairs(tracks: list[TrackInfo]) -> list[tuple[str, str]]:
     # Count each unique, sorted artist pair combination
     pair_counter = Counter()
     for track in tracks:
-        artist_pairs = getattr(track, "artist_pairs", None)
+        artist_pairs = track.get("artist_pairs", None)
         if artist_pairs:
             artist_pairs_sorted = tuple(sorted(artist_pairs, key=lambda tup: tup[0]))
             pair_counter[artist_pairs_sorted] += 1
@@ -361,24 +332,23 @@ def merge_artist_pairs(tracks: list[TrackInfo]) -> list[tuple[str, str]]:
     return list(most_common_pair)
 
 
-def merge_distribution(tracks: list[TrackInfo], key: str) -> np.ndarray:
+def merge_distribution(tracks, key) -> list:
     """
     Merge duplicate distributions (e.g. moods_mirex).
     Assumes all vectors under `key` have the same length.
     """
-    vecs = [getattr(t, key) for t in tracks if getattr(t, key, None) is not None]
+    vecs = [t[key] for t in tracks if key in t and t[key]]
     if not vecs:
-        return np.array([])
+        return []
 
-    # Stack and average using numpy
-    arr = np.stack(vecs)
-    merged = np.mean(arr, axis=0)
+    length = len(vecs[0])
+    merged = [sum(v[i] for v in vecs) / len(vecs) for i in range(length)]
 
-    s = np.sum(merged)
-    return merged / s if s > 0 else merged
+    s = sum(merged)
+    return [x / s for x in merged] if s > 0 else merged
 
 
-def process_file(json_path: str) -> TrackInfo | None:
+def process_file(json_path: str) -> dict | None:
     """
     Utility function for loading and parsing individual JSON files in parallel
     """
@@ -410,10 +380,14 @@ def stream_json_from_tar_zst(path: str, read_size=2*1024*1024):
                     except Exception as e:
                         log(f"[WARN] Failed {member.name}: {e}")                  
 
-def iter_archive(archive_path: str):
+def iter_archive(archive_path: str, limit: int | None = None):
     print(f"Loading {archive_path}", flush=True)
+    count = 0
     for filename, raw_json in stream_json_from_tar_zst(archive_path):
         result = extract_data_from_json_str(raw_json, filename)
         if result:
             yield result
+            count += 1
+            if limit is not None and count >= limit:
+                break
             
