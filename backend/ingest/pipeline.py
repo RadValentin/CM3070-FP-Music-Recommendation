@@ -131,7 +131,6 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     first_list = track_index[first_key]
     first_track = first_list[0]
     size_track = asizeof.asizeof(first_track)
-    print("")
     print(f"Size of track_index: {size_index:,} bytes ({size_index / 1024**2:.2f} MB)")
     print(f"Size of a track: {size_track:,} bytes ({size_track / 1024:.2f} KB)")
     end = time.time()
