@@ -126,13 +126,11 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     # Ensure transactions are committed to store
     track_index.flush()
 
-    size_index = track_index.size()
-    first_key = next(iter(track_index.keys()))
-    first_list = track_index[first_key]
-    first_track = first_list[0]
-    size_track = asizeof.asizeof(first_track)
-    print(f"Size of track_index: {size_index:,} bytes ({size_index / 1024**2:.2f} MB)")
-    print(f"Size of a track: {size_track:,} bytes ({size_track / 1024:.2f} KB)")
+    size_track_raw = asizeof.asizeof(track_index.first_value(raw=True))
+    size_track = asizeof.asizeof(track_index.first_value(raw=False))
+    print(f"Size of track_index on disk: ({track_index.map_size() / 1024**2:.2f} MB)")
+    print(f"Size of track_index pages: {track_index.size_pages() / 1024**2:.2f} MB")
+    print(f"Size of a track: {size_track / 1024:.2f} KB ({size_track_raw / 1024:.2f} KB compressed)")
     end = time.time()
     print(f"Finished loading JSON files in {end - start:.2f}s")
 
