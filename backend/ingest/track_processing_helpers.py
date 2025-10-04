@@ -1,8 +1,10 @@
-import re, os, orjson, json, tarfile
+import re, os, orjson, json, tarfile, uuid
+import numpy as np
 import zstandard as zstd
 from collections import Counter, defaultdict
 from datetime import datetime, date
 from statistics import median_low
+from typing import NamedTuple
 
 mute_logs = False
 invalid_date_count = 0
@@ -19,27 +21,49 @@ MBID_REGEX = re.compile(
 
 MIN_YEAR = 1000
 
+# Fields that are audio features, stored in a Numpy array
+FEATURE_FIELDS = [
+    "danceability", "aggressiveness", "happiness", "sadness", "relaxedness", "partyness", 
+    "acousticness", "electronicness", "instrumentalness", "tonality", "brightness",
+]
+FEATURE_INDEX = {name: i for i, name in enumerate(FEATURE_FIELDS)}
+
+
+class AlbumInfo(NamedTuple):
+    album_id: str | None
+    album_name: str | None
+    release_date: str | None
+
 
 def is_mbid(s: str) -> bool:
     """
     Check if a string is a valid 36 character MBID
     Link: https://musicbrainz.org/doc/MusicBrainz_Identifier
     """
-    if not s:
+    if not s or not isinstance(s, str):
         return False
-    return bool(MBID_REGEX.match(s))
+
+    mbid_string = s.strip()
+    if not MBID_REGEX.match(mbid_string):
+        return False
+    try:
+        # raises ValueError if not valid hex
+        uuid.UUID(mbid_string)
+        return True
+    except ValueError:
+        return False
 
 
-def log(message):
+def log(message: str) -> None:
     global mute_logs
 
     if not mute_logs:
         print(message)
 
 
-def parse_flexible_date(date_str:str = None):
+def parse_flexible_date(date_str: str = None) -> str | None:
     """
-    Given a date as a string, try to extract its information as a datetime object
+    Given a date as a string, try to extract its information as a ISO date string
     """
     if not date_str or not isinstance(date_str, str):
         return None
@@ -80,11 +104,11 @@ def parse_flexible_date(date_str:str = None):
 
             # Fill in missing components manually
             if fmt == "%Y":
-                return datetime(dt.year, 1, 1).date()
+                return datetime(dt.year, 1, 1).date().isoformat()
             elif fmt == "%Y-%m":
-                return datetime(dt.year, dt.month, 1).date()
+                return datetime(dt.year, dt.month, 1).date().isoformat()
             else:
-                return dt.date()
+                return dt.date().isoformat()
         except ValueError:
             continue
 
@@ -98,12 +122,12 @@ def parse_flexible_date(date_str:str = None):
         if year < MIN_YEAR:
             return None
 
-        return datetime(year, month, day).date()
+        return datetime(year, month, day).date().isoformat()
     except Exception:
         return None
 
 
-def extract_artist_info(tags):
+def extract_artist_info(tags: dict) -> list[tuple[str, str]]:
     """
     Returns a list of tuples (artist_id, artist_name)
     """
@@ -133,7 +157,7 @@ def extract_artist_info(tags):
     return artists
 
 
-def extract_album_info(tags):
+def extract_album_info(tags: dict) -> AlbumInfo | None:
     """
     Returns a tuple (album_id, album_name, release_date)
     """
@@ -158,7 +182,7 @@ def extract_album_info(tags):
     return (album_id if is_mbid(album_id) else None, album_name, release_date)
 
 
-def extract_prob_vector(highlevel: dict, parent_key: str, order: list) -> list[float]:
+def extract_prob_vector(highlevel: dict, parent_key: str, order: list[str]) -> list[float]:
     """
     Extracts and normalizes a probability vector from a nested dict.
     - highlevel: source dictionary
@@ -170,11 +194,11 @@ def extract_prob_vector(highlevel: dict, parent_key: str, order: list) -> list[f
     vec = [float(probs.get(key, 0.0)) for key in order]
     s = sum(vec)
     return [x / s for x in vec] if s > 0 else vec
+    
 
-
-def extract_data_from_json_str(json_str, file_path=None):
+def extract_data_from_json_str(json_str: str, file_path: str | None = None) -> dict | None:
     """
-    Returns a track dictionary with:
+    Returns a TrackInfo class containing:
     metadata - musicbrainz_recordingid, title, duration, etc.
     high-level features - danceability, aggressiveness, etc.
     artist_pairs - a list of tuples (artist_id, artist_name), the artists for the track
@@ -184,7 +208,7 @@ def extract_data_from_json_str(json_str, file_path=None):
 
     try:
         data = orjson.loads(json_str)
-    except json.JSONDecodeError:
+    except orjson.JSONDecodeError:
         log(f"Bad JSON string")
         missing_data_count += 1
         return None
@@ -204,37 +228,38 @@ def extract_data_from_json_str(json_str, file_path=None):
         title = tags.get("title", [None])[0]
         if not title:
             raise ValueError("missing title")
+
+        # High-level features     
+        numeric_features = [
+            float(highlevel["danceability"]["all"]["danceable"]),
+            float(highlevel["mood_aggressive"]["all"]["aggressive"]),
+            float(highlevel["mood_happy"]["all"]["happy"]),
+            float(highlevel["mood_sad"]["all"]["sad"]),
+            float(highlevel["mood_relaxed"]["all"]["relaxed"]),
+            float(highlevel["mood_party"]["all"]["party"]),
+            float(highlevel["mood_acoustic"]["all"]["acoustic"]),
+            float(highlevel["mood_electronic"]["all"]["electronic"]),
+            float(highlevel["voice_instrumental"]["all"]["instrumental"]),
+            float(highlevel["tonal_atonal"]["all"]["tonal"]),
+            float(highlevel["timbre"]["all"]["bright"]),
+        ]
         
         # Create a new track entry using the data from JSON
-        track = {
+        return {
+            # Associate artists and album with the track
+            "album_info": extract_album_info(tags),
+            "artist_pairs": extract_artist_info(tags),
             # Required metadata
-            "musicbrainz_recordingid": mbid,
+            "musicbrainz_recordingid": str(uuid.UUID(mbid)),
             "title": title,
-            "duration": metadata["audio_properties"]["length"],
+            "duration": float(metadata["audio_properties"]["length"] or 0),
+            # TODO: Store these as references to an enum instead of strings since we're 
+            # dealing with a small subset of values.
             "genre_dortmund": highlevel["genre_dortmund"]["value"],
             "genre_rosamerica": highlevel["genre_rosamerica"]["value"],
-            "file_path": os.path.normpath(file_path) if file_path else None,
-            # High-level features
-            "danceability": highlevel["danceability"]["all"]["danceable"],
-            "aggressiveness": highlevel["mood_aggressive"]["all"]["aggressive"],
-            "happiness": highlevel["mood_happy"]["all"]["happy"],
-            "sadness": highlevel["mood_sad"]["all"]["sad"],
-            "relaxedness": highlevel["mood_relaxed"]["all"]["relaxed"],
-            "partyness": highlevel["mood_party"]["all"]["party"],
-            "acousticness": highlevel["mood_acoustic"]["all"]["acoustic"],
-            "electronicness": highlevel["mood_electronic"]["all"]["electronic"],
-            "instrumentalness": highlevel["voice_instrumental"]["all"]["instrumental"],
-            "tonality": highlevel["tonal_atonal"]["all"]["tonal"],
-            "brightness": highlevel["timbre"]["all"]["bright"],
-            # Multi-dimensional features
+            "numeric_features": numeric_features,
             "moods_mirex": extract_prob_vector(highlevel, "moods_mirex", MIREX_ORDER)
         }
-
-        # Associate artists and album with the track
-        track["artist_pairs"] = extract_artist_info(tags=tags)
-        track["album_info"] = extract_album_info(tags=tags)
-
-        return track
 
     except (KeyError, IndexError, TypeError, ValueError) as ex:
         if file_path:
@@ -245,14 +270,14 @@ def extract_data_from_json_str(json_str, file_path=None):
         return None
 
 
-def merge_album_info(tracks):
+def merge_album_info(tracks: list[dict]) -> tuple[str, str, str] | None:
     """
     Given a list of duplicate tracks, merge album information by selecting most representative values:
     1) Pick the most common `album_id` across duplicates.
     2) Among entries with that `album_id`, pick most common name.
     3) For date, pick the median date (robust to outliers).
 
-    `tracks: list[dict]` where each dict has `"album_info": (album_id, album_name, release_date)`
+    `tracks: list[dict]` where each dict has `"album_info": [album_id, album_name, release_date]`
 
     Returns: (album_id, album_name, release_date) or None
     """
@@ -261,16 +286,16 @@ def merge_album_info(tracks):
     date_counter = defaultdict(list)
 
     for track in tracks:
-        album = track.get("album_info")
+        album = track.get("album_info", None)
         if not album:
             continue
-
-        album_id, album_name, release_date = album
+        album_tuple = tuple(album)
+        album_id, album_name, release_date = album_tuple
         if album_id:
             id_counter[album_id] += 1
         if album_name:
             name_counter[album_id].append(album_name)
-        if release_date and isinstance(release_date, date):
+        if release_date:
             date_counter[album_id].append(release_date)
     
     if not id_counter:
@@ -286,7 +311,7 @@ def merge_album_info(tracks):
     return (best_id, best_name, best_date)
 
 
-def merge_artist_pairs(tracks):
+def merge_artist_pairs(tracks: list[dict]) -> list[tuple[str, str]]:
     """
     Given a list of duplicate tracks, extract a list of tuples from each (artist_id, artist_name) 
     and merge the tracks by selecting the most common tuple combination.
@@ -294,9 +319,11 @@ def merge_artist_pairs(tracks):
     # Count each unique, sorted artist pair combination
     pair_counter = Counter()
     for track in tracks:
-        artist_pairs = track.get("artist_pairs")
+        artist_pairs = track.get("artist_pairs", None)
         if artist_pairs:
-            artist_pairs_sorted = tuple(sorted(artist_pairs, key=lambda tup: tup[0]))
+            # Convert each inner list to tuple for hashing
+            artist_pairs_tuples = [tuple(pair) for pair in artist_pairs]
+            artist_pairs_sorted = tuple(sorted(artist_pairs_tuples, key=lambda tup: tup[0]))
             pair_counter[artist_pairs_sorted] += 1
 
     if not pair_counter:
@@ -307,7 +334,7 @@ def merge_artist_pairs(tracks):
     return list(most_common_pair)
 
 
-def merge_distribution(tracks, key):
+def merge_distribution(tracks, key) -> list:
     """
     Merge duplicate distributions (e.g. moods_mirex).
     Assumes all vectors under `key` have the same length.
@@ -323,7 +350,7 @@ def merge_distribution(tracks, key):
     return [x / s for x in merged] if s > 0 else merged
 
 
-def process_file(json_path):
+def process_file(json_path: str) -> dict | None:
     """
     Utility function for loading and parsing individual JSON files in parallel
     """
@@ -336,28 +363,34 @@ def process_file(json_path):
         return None
 
 
-def stream_json_from_tar_zst(path):
+def stream_json_from_tar_zst(path: str, read_size=2*1024*1024):
     dctx = zstd.ZstdDecompressor()
-    with open(path, 'rb') as f:
-        with dctx.stream_reader(f) as stream:
-            with tarfile.open(fileobj=stream, mode='r|') as tar:
+    with open(path, "rb") as f:
+        with dctx.stream_reader(f, read_size=read_size) as stream:
+            with tarfile.open(fileobj=stream, mode="r|*") as tar:
                 for member in tar:
-                    if member.isfile() and member.name.endswith('.json'):
+                    if not (member.isfile() and member.name.endswith(".json")):
+                        continue
+                    try:
                         fileobj = tar.extractfile(member)
-                        if fileobj is None:
+                        if not fileobj:
+                            log(f"[WARN] Skipping {member.name}")
                             continue
-                        try:
-                            data = fileobj.read()
+                        with fileobj:
+                            data = fileobj.read().decode("utf-8", errors="replace")
                             yield member.name, data
-                        except Exception as e:
-                            print(f"[WARN] Skipping {member.name}: {e}")
+                    except Exception as e:
+                        log(f"[WARN] Failed {member.name}: {e}")                  
 
-
-def process_archive(archive_path):
-    results = []
-    print(f"Loading {archive_path}", flush=True)
+def iter_archive(archive_path: str, limit: int | None = None):
+    print(f"Loading {archive_path}", end="", flush=True)
+    count = 0
     for filename, raw_json in stream_json_from_tar_zst(archive_path):
         result = extract_data_from_json_str(raw_json, filename)
         if result:
-            results.append(result)
-    return results
+            yield result
+            count += 1
+            if limit is not None and count >= limit:
+                break
+
+    print("", flush=True)     

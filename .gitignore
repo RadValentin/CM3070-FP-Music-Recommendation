@@ -175,6 +175,7 @@ cython_debug/
 
 # Project-specific files
 staticfiles/
+lmdb_data/
 features_and_index.npz
 output.txt
 db.sqbpro
