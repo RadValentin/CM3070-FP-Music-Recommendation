@@ -114,3 +114,33 @@ Die Toten Hosen      | Sexual                         | 1994   | electr | roc  |
 Stats for similarities:
 mean: 0.4176083572281412 std: 0.3186107228239245 p95: 0.8153162661022664 max: 0.9977081299874807
 Script execution took 3.54500 seconds
+
+
+THIRTY MILLION
+
+Feature matrix stats:
+Number of unique tracks: 5261105
+Number of unique feature vectors: 5258145
+Number of near-zero columns: 0
+Total number of columns: 16
+Cosine similarity search took 0.01791 seconds, compared against 166,720/5,261,105
+Tracks similar to: Metallica - Enter Sandman (1991) [electronic] [roc] [62c2e20a-559e-422f-a44c-9afa7882f0c4]:
+
+Recommendations:
+Artist               | Title                          | Year   | Dort   | Rosa | Sim   | Sub | Score | MBID             
+-------------------------------------------------------------------------------------------------------------------------------------------
+Metallica            | Don't Tread on Me              | 1991   | electr | roc  | 0.934 | 134 | 1.331 | 9420c245-10aa-43bf-a583-08f0219e5666
+Tool                 | Sweat                          | 1992   | electr | roc  | 0.945 |  70 | 1.276 | 37f12582-e0aa-4f53-bb2e-d1527e8f2299
+Papa Roach           | Liquid Diet                    | 1997   | electr | roc  | 0.940 |  31 | 1.193 | eead7db7-05ce-44a7-b4af-e67c7a5ba856
+Megadeth             | Captive Honour                 | 1992   | electr | roc  | 0.944 |  28 | 1.186 | b856978c-bc0e-4657-ae67-539b9005f884
+Green Day            | Brain Stew                     | 1995   | electr | roc  | 0.937 |  28 | 1.180 | 6daca8a2-8e3c-461f-97fc-a0494cd4e55d
+INXS                 | New Sensation                  | 1991   | electr | roc  | 0.934 |  23 | 1.159 | b1a3650d-300e-4837-a215-a8423eced37a
+The Verve Pipe       | Myself                         | 1996   | electr | roc  | 0.937 |  20 | 1.148 | 249b6b05-3d4e-4af6-be82-48f32d34da60
+KISS                 | Journey of 1,000 Years         | 1998   | electr | roc  | 0.935 |  20 | 1.146 | 9db21275-c0b0-4922-a87a-e628d10d1e92
+Hum                  | The Inuit Promise              | 1997   | electr | roc  | 0.942 |  16 | 1.131 | 2eef7bda-f2fd-49a5-b748-bceb51b8432a
+Staind               | A Flat                         | 1999   | electr | roc  | 0.938 |  16 | 1.127 | f0648159-fa59-40d8-8988-14ddf7a7262d
+
+Stats for similarities:
+mean: 0.4145379081473789 std: 0.33076701860541935 p95: 0.8214339091307262 max: 0.9995919081604828
+Script execution took 9.19607 seconds
+
