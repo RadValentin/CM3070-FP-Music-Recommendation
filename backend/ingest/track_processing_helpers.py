@@ -383,7 +383,7 @@ def stream_json_from_tar_zst(path: str, read_size=2*1024*1024):
                         log(f"[WARN] Failed {member.name}: {e}")                  
 
 def iter_archive(archive_path: str, limit: int | None = None):
-    print(f"Loading {archive_path}", end="", flush=True)
+    print(f"Loading {os.path.normpath(archive_path)}", end="", flush=True)
     count = 0
     for filename, raw_json in stream_json_from_tar_zst(archive_path):
         result = extract_data_from_json_str(raw_json, filename)
