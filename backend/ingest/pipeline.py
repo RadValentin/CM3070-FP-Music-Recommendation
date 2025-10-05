@@ -31,6 +31,17 @@ def ingest_parsed_track(result: dict, track_index: LMDBTrackIndex, counters):
         print(".", end="", flush=True)
 
 
+def show_progress_bar(done: int, total: int, step=10000, message: str = ""):
+    if ((done % step) == 0) or (done == total):
+        percent = done / total
+        filled = int(percent * 30)
+        bar = "#" * filled + "-" * (30 - filled)
+        if message:
+            print(f"\r{message} [{bar}] {done}/{total} ({percent*100:5.1f}%)", end="", flush=True)
+        else:
+            print(f"\r[{bar}] {done}/{total} ({percent*100:5.1f}%)", end="", flush=True)
+
+
 def build_database(use_sample: bool, show_log: bool, num_parts: int = None, parts_list: list = None):
     # Size of on-disk track index, set an arbitrary default 2GB
     MAP_SIZE = 1024 * 1024 * 1024 * 2
@@ -98,11 +109,11 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
                     else:
                         print(f"Non-JSON file skipped: {name}")
 
-        MAP_SIZE = len(parts_dirs) * 2 * 1024 * 1024 * 1024 # 2GB per 1M files
+        MAP_SIZE = len(parts_dirs) * 1 * 1024 * 1024 * 1024 # 1GB per 1M files
         # json_paths = json_paths[0:1000] # use only a subset of the data, for debugging
         print(f"Will load {len(json_paths):,} records", end="", flush=True)
     else:
-        MAP_SIZE = len(archive_paths) * 2 * 1024 * 1024 * 1024 # 2GB per archive
+        MAP_SIZE = len(archive_paths) * 1 * 1024 * 1024 * 1024 # 1GB per archive
         print(f"Will load records from archives", flush=True)
 
     # keep track of unique track data, indexed by MBID
@@ -147,9 +158,15 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         f"{field}_{i+1}" for field, order in VEC_FIELDS for i in range(len(order))
     ]
 
-    for mbid in track_index.keys():
-        tracks = track_index.get(mbid)
+    merged_count = 0
+    track_index_keys = track_index.keys()
+    track_index_keys_count = len(track_index_keys)
+    for mbid in track_index_keys:
+        # Show progress bar
+        merged_count += 1 
+        show_progress_bar(merged_count, track_index_keys_count, message="Merging:")
 
+        tracks = track_index.get(mbid)
         if not tracks:
             track_index[mbid] = None
             continue
@@ -195,7 +212,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         del tracks
 
     end = time.time()
-    print(f"Finished merging tracks in {end - start:.2f}s")
+    print(f"\nFinished merging tracks in {end - start:.2f}s")
 
     ## NOTE: Phase 3 - Build the DB models
 
@@ -316,13 +333,11 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         print(f"Inserted Artists and Albums in {end - start:.2f} seconds")
 
         start = time.time()
-        print("Will insert Tracks in DB", end="", flush=True)
-
         for i in range(0, len(track_list), BATCH_SIZE):
             Track.objects.bulk_create(
                 track_list[i : i + BATCH_SIZE], batch_size=BATCH_SIZE
             )
-            print(".", end="", flush=True)
+            show_progress_bar(i, len(track_list), BATCH_SIZE, message="Inserting Tracks:")
 
         end = time.time()
         print(f"\nInserted {len(track_list)} Tracks in {end - start:.2f} seconds")
@@ -349,9 +364,11 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
 
         for i in range(0, len(trackartist_list), BATCH_SIZE):
             TrackArtist.objects.bulk_create(trackartist_list[i:i+BATCH_SIZE], batch_size=BATCH_SIZE)
+            show_progress_bar(i, len(trackartist_list), BATCH_SIZE, message="Inserting TrackArtist:")
 
         for i in range(0, len(albumartist_list), BATCH_SIZE):
             AlbumArtist.objects.bulk_create(albumartist_list[i:i+BATCH_SIZE], batch_size=BATCH_SIZE)
+            show_progress_bar(i, len(albumartist_list), BATCH_SIZE, message="Inserting AlbumArtist:")
 
         end = time.time()
         print(f"Inserted M2M pairings for TrackArtist and AlbumArtist in {end - start:.2f} seconds")
