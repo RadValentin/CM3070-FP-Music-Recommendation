@@ -1,88 +1,183 @@
-SAMPLE
+SAMPLE - UNCOMPRESSED
 
-Size of track_index: 363,782,144 bytes (346.93 MB)
-Size of a track: 2,424 bytes (2.37 KB)
-Finished loading JSON files in 16.81s
+Size of track_index on disk: (1024.00 MB)
+Size of track_index pages: 101.81 MB
+Size of a track: 2.32 KB (0.66 KB compressed)
+Finished loading JSON files in 13.99s
 Will merge duplicate tracks.
-Finished merging tracks in 9.87s
+Finished merging tracks in 8.72s
 Will build DB models.
-Built Track models in 2.11s, now running the ORM inserts.
+Built Track models in 1.77s, now running the ORM inserts.
 Found 11,182 duplicate submissions.
 Found 1,459 submissions with invalid dates.
 Found 4 submissions with missing data.
 Dropped 3,082 tracks with no artist.
 Tracks with year=0: 1319 / 85732
-Inserted Artists and Albums in 0.48 seconds
+Inserted Artists and Albums in 0.54 seconds
 Will insert Tracks in DB.....
-Inserted 85732 Tracks in 10.52 seconds
-Inserted M2M pairings for TrackArtist and AlbumArtist in 6.89 seconds
-Exported feature matrix and indexes in 0.78 seconds
+Inserted 85732 Tracks in 9.21 seconds
+Inserted M2M pairings for TrackArtist and AlbumArtist in 5.54 seconds
+Exported feature matrix and indexes in 0.81 seconds
+Build complete.
 
 
-ONE MILLION
+SAMPLE - WITH COMPRESSION
 
-Size of track_index: 2,869,362,688 bytes (2736.44 MB)
-Size of a track: 2,384 bytes (2.33 KB)
-Finished loading JSON files in 151.11s
+Size of track_index on disk: (1024.00 MB)
+Size of track_index pages: 67.82 MB
+Size of a track: 2.32 KB (0.48 KB compressed)
+Finished loading JSON files in 15.45s
 Will merge duplicate tracks.
-Finished merging tracks in 82.13s
+Finished merging tracks in 10.32s
 Will build DB models.
-Built Track models in 18.29s, now running the ORM inserts.
+Built Track models in 2.12s, now running the ORM inserts.
+Found 11,182 duplicate submissions.
+Found 1,459 submissions with invalid dates.
+Found 4 submissions with missing data.
+Dropped 3,082 tracks with no artist.
+Tracks with year=0: 1319 / 85732
+Inserted Artists and Albums in 0.52 seconds
+Will insert Tracks in DB.....
+Inserted 85732 Tracks in 9.22 seconds
+Inserted M2M pairings for TrackArtist and AlbumArtist in 5.57 seconds
+Exported feature matrix and indexes in 0.82 seconds
+
+
+ONE MILLION - UNCOMPRESSED
+
+Size of track_index on disk: (2048.00 MB)
+Size of track_index pages: 1036.21 MB
+Size of a track: 4.09 KB (1.29 KB compressed)
+Finished loading JSON files in 128.31s
+Will merge duplicate tracks.
+Finished merging tracks in 72.98s
+Will build DB models.
+Built Track models in 15.23s, now running the ORM inserts.
 Found 298,870 duplicate submissions.
 Found 33,131 submissions with invalid dates.
 Found 602 submissions with missing data.
 Dropped 31,920 tracks with no artist.
 Tracks with year=0: 27791 / 668608
-Inserted Artists and Albums in 7.64 seconds
-Will insert Tracks in DB...
-Inserted 668608 Tracks in 102.78 seconds
-Inserted M2M pairings for TrackArtist and AlbumArtist in 63.75 seconds
-Exported feature matrix and indexes in 6.13 seconds
+Inserted Artists and Albums in 4.53 seconds
+Will insert Tracks in DB..................................
+Inserted 668608 Tracks in 91.38 seconds
+Inserted M2M pairings for TrackArtist and AlbumArtist in 53.29 seconds
+Exported feature matrix and indexes in 6.42 seconds
 
 
-FIVE MILLION
+ONE MILLION - WITH COMPRESSION
 
-Size of track_index: 9,480,716,288 bytes (9041.52 MB)
-Size of a track: 2,264 bytes (2.21 KB)
-Finished loading JSON files in 772.50s
+Size of track_index on disk: (1024.00 MB)
+Size of track_index pages: 587.20 MB
+Size of a track: 4.09 KB (0.66 KB compressed)
+Finished loading JSON files in 142.18s
 Will merge duplicate tracks.
-Finished merging tracks in 276.37s
+Finished merging tracks in 84.24s
 Will build DB models.
-Built Track models in 51.86s, now running the ORM inserts.
+Built Track models in 17.36s, now running the ORM inserts.
+Found 298,870 duplicate submissions.
+Found 33,131 submissions with invalid dates.
+Found 602 submissions with missing data.
+Dropped 31,920 tracks with no artist.
+Tracks with year=0: 27791 / 668608
+Inserted Artists and Albums in 4.54 seconds
+Will insert Tracks in DB..................................
+Inserted 668608 Tracks in 90.38 seconds
+Inserted M2M pairings for TrackArtist and AlbumArtist in 52.86 seconds
+Exported feature matrix and indexes in 6.43 seconds
+
+
+FIVE MILLION - UNCOMPRESSED
+
+Size of track_index on disk: (10240.00 MB)
+Size of track_index pages: 4881.46 MB
+Size of a track: 2.32 KB (0.66 KB compressed)
+Finished loading JSON files in 680.49s
+Will merge duplicate tracks.
+Finished merging tracks in 259.99s
+Will build DB models.
+Built Track models in 44.84s, now running the ORM inserts.
 Found 2,615,676 duplicate submissions.
 Found 343,937 submissions with invalid dates.
 Found 69,696 submissions with missing data.
 Dropped 393,189 tracks with no artist.
 Tracks with year=0: 164219 / 1921439
-Inserted Artists and Albums in 18.44 seconds
+Inserted Artists and Albums in 16.82 seconds
 Will insert Tracks in DB...
-Inserted 1921439 Tracks in 307.06 seconds
-Inserted M2M pairings for TrackArtist and AlbumArtist in 218.41 seconds
-Exported feature matrix and indexes in 17.88 seconds
+Inserted 1921439 Tracks in 274.52 seconds
+Inserted M2M pairings for TrackArtist and AlbumArtist in 175.70 seconds
+Exported feature matrix and indexes in 18.79 seconds
 
 
-TEN MILLION
+FIVE MILLION - WITH COMPRESSION
 
-Size of track_index: 12,432,482,304 bytes (11856.54 MB)
-Size of a track: 2,344 bytes (2.29 KB)
-Finished loading JSON files in 1868.69s
+Size of track_index on disk: (5120.00 MB)
+Size of track_index pages: 2315.54 MB
+Size of a track: 2.32 KB (0.48 KB compressed)
+Finished loading JSON files in 821.03s
 Will merge duplicate tracks.
-Finished merging tracks in 387.55s
+Finished merging tracks in 294.52s
 Will build DB models.
-Built Track models in 78.78s, now running the ORM inserts.
+Built Track models in 51.51s, now running the ORM inserts.
+Found 2,615,676 duplicate submissions.
+Found 343,937 submissions with invalid dates.
+Found 69,696 submissions with missing data.
+Dropped 393,189 tracks with no artist.
+Tracks with year=0: 164219 / 1921439
+Inserted Artists and Albums in 17.33 seconds
+Will insert Tracks in DB...
+Inserted 1921439 Tracks in 274.76 seconds
+Inserted M2M pairings for TrackArtist and AlbumArtist in 180.82 seconds
+Exported feature matrix and indexes in 18.57 seconds
+
+
+TEN MILLION - UNCOMPRESSED
+
+Size of track_index on disk: (20480.00 MB)
+Size of track_index pages: 8972.98 MB
+Size of a track: 2.32 KB (0.66 KB compressed)
+Finished loading JSON files in 1663.36s
+Will merge duplicate tracks.
+Merging: [##############################] 3035274/3035274 (100.0%)
+Finished merging tracks in 352.67s
+Will build DB models.
+Built Track models in 90.29s, now running the ORM inserts.
 Found 6,861,916 duplicate submissions.
 Found 479,203 submissions with invalid dates.
 Found 102,810 submissions with missing data.
 Dropped 583,226 tracks with no artist.
 Tracks with year=0: 176359 / 2452048
-Inserted Artists and Albums in 23.11 seconds
-Will insert Tracks in DB...
-Inserted 2452048 Tracks in 395.33 seconds
-Inserted M2M pairings for TrackArtist and AlbumArtist in 288.53 seconds
-Exported feature matrix and indexes in 22.20 seconds
+Inserted Artists and Albums in 22.41 seconds
+[#############################-] 2440000/2452048 ( 99.5%)
+Inserted 2452048 Tracks in 357.59 seconds
+Inserted M2M pairings for TrackArtist and AlbumArtist in 238.91 seconds
+Exported feature matrix and indexes in 23.49 seconds
 
 
-THIRTY MILLION
+TEN MILLION - COMPRESSED
+
+Size of track_index on disk: (10240.00 MB)
+Size of track_index pages: 3699.84 MB
+Size of a track: 2.32 KB (0.48 KB compressed)
+Finished loading JSON files in 1914.53s
+Will merge duplicate tracks.
+Merging: [##############################] 3035274/3035274 (100.0%)
+Finished merging tracks in 403.09s
+Will build DB models.
+Built Track models in 68.91s, now running the ORM inserts.
+Found 6,861,916 duplicate submissions.
+Found 479,203 submissions with invalid dates.
+Found 102,810 submissions with missing data.
+Dropped 583,226 tracks with no artist.
+Tracks with year=0: 176359 / 2452048
+Inserted Artists and Albums in 22.38 seconds
+[#############################-] 2440000/2452048 ( 99.5%)
+Inserted 2452048 Tracks in 376.57 seconds
+Inserted M2M pairings for TrackArtist and AlbumArtist in 243.18 seconds
+Exported feature matrix and indexes in 23.99 seconds
+
+
+THIRTY MILLION - UNCOMPRESSED
 
 Size of track_index: 30,817,406,976 bytes (29389.77 MB)
 Size of a track: 2,032 bytes (1.98 KB)
@@ -100,3 +195,26 @@ Inserted Artists and Albums in 47.75 seconds
 Will insert Tracks in DB...
 Inserted M2M pairings for TrackArtist and AlbumArtist in 700.76 seconds
 Exported feature matrix and indexes in 50.30 seconds
+
+
+THIRTY MILLION - COMPRESSED
+
+Size of track_index on disk: (30720.00 MB)
+Size of track_index pages: 9592.09 MB
+Size of a track: 2.32 KB (0.48 KB compressed)
+Finished loading JSON files in 6855.80s
+Will merge duplicate tracks.
+Merging: [##############################] 7523781/7523781 (100.0%)
+Finished merging tracks in 1013.16s
+Will build DB models.
+Built Track models in 287.41s, now running the ORM inserts.
+Found 21,656,426 duplicate submissions.
+Found 960,039 submissions with invalid dates.
+Found 280,377 submissions with missing data.
+Dropped 2,262,676 tracks with no artist.
+Tracks with year=0: 250540 / 5261105
+Inserted Artists and Albums in 47.13 seconds
+[#############################-] 5260000/5261105 (100.0%)
+Inserted 5261105 Tracks in 857.04 seconds
+Inserted M2M pairings for TrackArtist and AlbumArtist in 720.55 seconds
+Exported feature matrix and indexes in 51.13 seconds
