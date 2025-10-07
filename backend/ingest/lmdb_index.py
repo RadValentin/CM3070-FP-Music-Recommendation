@@ -165,7 +165,7 @@ class LMDBTrackIndex:
                     if raw:
                         return values_bytes
                     return self._deserialize_values(values_bytes)
-                return None, None
+                return None
 
     def flush(self):
         # commit any pending batch then fsync (needed due to sync=False in env.open)

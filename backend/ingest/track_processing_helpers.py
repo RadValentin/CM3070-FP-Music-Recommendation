@@ -29,12 +29,6 @@ FEATURE_FIELDS = [
 FEATURE_INDEX = {name: i for i, name in enumerate(FEATURE_FIELDS)}
 
 
-class AlbumInfo(NamedTuple):
-    album_id: str | None
-    album_name: str | None
-    release_date: str | None
-
-
 def is_mbid(s: str) -> bool:
     """
     Check if a string is a valid 36 character MBID
@@ -157,7 +151,7 @@ def extract_artist_info(tags: dict) -> list[tuple[str, str]]:
     return artists
 
 
-def extract_album_info(tags: dict) -> AlbumInfo | None:
+def extract_album_info(tags: dict) -> tuple[str | None, str | None, str | None] | None:
     """
     Returns a tuple (album_id, album_name, release_date)
     """
@@ -198,11 +192,12 @@ def extract_prob_vector(highlevel: dict, parent_key: str, order: list[str]) -> l
 
 def extract_data_from_json_str(json_str: str, file_path: str | None = None) -> dict | None:
     """
-    Returns a TrackInfo class containing:
-    metadata - musicbrainz_recordingid, title, duration, etc.
-    high-level features - danceability, aggressiveness, etc.
-    artist_pairs - a list of tuples (artist_id, artist_name), the artists for the track
-    album_info - a list of tuples (album_id, album_name, release_date), the album the track is on
+    Returns a track dictionary with:
+
+    - metadata: musicbrainz_recordingid, title, duration, etc.
+    - high-level features: danceability, aggressiveness, etc.
+    - artist_pairs: a list of tuples (artist_id, artist_name), the artists for the track
+    - album_info: a tuple (album_id, album_name, release_date), the album the track is on
     """
     global missing_data_count
 
