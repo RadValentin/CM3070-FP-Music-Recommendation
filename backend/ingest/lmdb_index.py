@@ -1,3 +1,4 @@
+from collections import defaultdict
 import lmdb, orjson, uuid
 import zstandard as zstd
 
@@ -12,7 +13,7 @@ class LMDBTrackIndex:
     returned as lists of JSON dicts as tracks can have duplicates.
     """
 
-    def __init__(self, path, map_size=1024 * 1024 * 1024 * 2, disable_compression=False):
+    def __init__(self, path, map_size=2 * 1024**3, disable_compression=False, batch=10000):
         self.env = lmdb.open(
             path,
             map_size=map_size,
@@ -30,6 +31,11 @@ class LMDBTrackIndex:
         if not disable_compression:
             self.compressor = zstd.ZstdCompressor(level=1)
             self.decompressor = zstd.ZstdDecompressor()
+        self.stats = defaultdict(int)
+        # batch writes
+        self._txn = None
+        self._n = 0
+        self._batch = batch
 
     def _serialize_key(self, key: str) -> bytes:
         """Convert a key to bytes representation for internal use"""
@@ -57,33 +63,50 @@ class LMDBTrackIndex:
 
     def append(self, key: str, value):
         key_bytes = self._serialize_key(key)
-        with self.env.begin(write=True, db=self.db) as txn:
-            current = txn.get(key_bytes)
-            if current:
-                lst = self._deserialize_values(current)
-                lst.append(value)
-            else:
-                lst = [value]
-            txn.put(key_bytes, self._serialize_values(lst))
+
+        if self._txn is None:
+            self._txn = self.env.begin(write=True, db=self.db, buffers=True)
+            self._n = 0
+
+        current = self._txn.get(key_bytes)
+        if current:
+            lst = self._deserialize_values(current)
+            lst.append(value)
+            self.stats["duplicates"] += 1
+        else:
+            lst = [value]
+        
+        self._txn.put(key_bytes, self._serialize_values(lst))
+        self._n += 1
+        if self._n >= self._batch:
+            self._txn.commit()
+            self._txn = None
 
     def __setitem__(self, key: str, values):
         key_bytes = self._serialize_key(key)
+        if self._txn is None:
+            self._txn = self.env.begin(write=True, db=self.db)
+            self._n = 0
         if values is None:
-            with self.env.begin(write=True, db=self.db) as txn:
-                txn.delete(key_bytes)
-            return
-        if not isinstance(values, list):
-            raise ValueError("Value must be a list")
-        with self.env.begin(write=True, db=self.db) as txn:
-            txn.put(key_bytes, self._serialize_values(values))
+            self._txn.delete(key_bytes)
+        else:
+            if not isinstance(values, list):
+                raise ValueError("Value must be a list")
+            self._txn.put(key_bytes, self._serialize_values(values))
+        
+        self._n += 1
+        if self._n >= self._batch:
+            self._txn.commit()
+            self._txn = None
 
     def get(self, key: str, default=None):
         key_bytes = self._serialize_key(key)
-        with self.env.begin(db=self.db) as txn:
-            val = txn.get(key_bytes)
-            if val is None:
-                return default if default is not None else []
-            return self._deserialize_values(val)
+
+        txn = self._txn if self._txn is not None else self.env.begin(db=self.db)
+        val = txn.get(key_bytes)
+        if val is None:
+            return default if default is not None else []
+        return self._deserialize_values(val)
 
     def __getitem__(self, key: str):
         result = self.get(key)
@@ -130,6 +153,11 @@ class LMDBTrackIndex:
                 return None, None
 
     def flush(self):
+        # commit any pending batch then fsync (needed due to sync=False in env.open)
+        if self._txn is not None:
+            self._txn.commit()
+            self._txn = None
+            self._n = 0
         self.env.sync()
 
     def close(self):

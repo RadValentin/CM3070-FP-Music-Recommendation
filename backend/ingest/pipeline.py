@@ -22,8 +22,6 @@ def ingest_parsed_track(result: dict, track_index: LMDBTrackIndex, counters):
         return
     
     track_id = result["musicbrainz_recordingid"]
-    if track_index.get(track_id):
-        counters["duplicates"] += 1
     track_index.append(track_id, result)
     
     counters["processing"] += 1
@@ -49,7 +47,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     BASE_DIR = Path(__file__).resolve().parent.parent
     config = dotenv_values(BASE_DIR / ".env")
     # globals used to track how many records are skipped while processing
-    counters = {"duplicates": 0, "missing_artist": 0, "processing": 0}
+    counters = {"missing_artist": 0, "processing": 0}
     tph.mute_logs = not show_log
 
     ## NOTE: Phase 1 - Load JSON data about tracks into memory
@@ -134,7 +132,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
             for parsed in chain.from_iterable(streams):
                 ingest_parsed_track(parsed, track_index, counters)
 
-    # Ensure transactions are committed to store
+    # Ensure pending transactions are committed to store
     track_index.flush()
 
     size_track_raw = asizeof.asizeof(track_index.first_value(raw=True))
@@ -211,6 +209,8 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         track_index[mbid] = [base_track]
         del tracks
 
+    # Ensure pending transactions are committed to store
+    track_index.flush()
     end = time.time()
     print(f"\nFinished merging tracks in {end - start:.2f}s")
 
@@ -295,20 +295,20 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
             + track_features
             + vec_features
         )
-    track_index.close()
-    del track_index
-    gc.collect()
-    shutil.rmtree(lmdb_dir)
-
+    
     end = time.time()
     print(f"Built Track models in {end - start:.2f}s, now running the ORM inserts.")
-    print(f"Found {counters["duplicates"]:,} duplicate submissions.")
+    print(f"Found {track_index.stats["duplicates"]:,} duplicate submissions.")
     print(f"Found {tph.invalid_date_count:,} submissions with invalid dates.")
     print(f"Found {tph.missing_data_count:,} submissions with missing data.")
     print(f"Dropped {counters["missing_artist"]:,} tracks with no artist.")
     zero_year_count = sum(row[3] == 0 for row in track_features_list)
     print(f"Tracks with year=0: {zero_year_count} / {len(track_features_list)}")
 
+    track_index.close()
+    del track_index
+    gc.collect()
+    shutil.rmtree(lmdb_dir)
 
     ## NOTE: Phase 4 - Insert data into DB
 
@@ -371,7 +371,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
             show_progress_bar(i, len(albumartist_list), BATCH_SIZE, message="Inserting AlbumArtist:")
 
         end = time.time()
-        print(f"Inserted M2M pairings for TrackArtist and AlbumArtist in {end - start:.2f} seconds")
+        print(f"\nInserted M2M pairings for TrackArtist and AlbumArtist in {end - start:.2f} seconds")
         del trackartist_list
         del albumartist_list
         del album_index
