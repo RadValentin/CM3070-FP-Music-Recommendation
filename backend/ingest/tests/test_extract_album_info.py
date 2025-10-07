@@ -15,7 +15,7 @@ class ExtractalbumInfoTests(SimpleTestCase):
             "date": ["2019"]
         }
         result = extract_album_info(tags)
-        self.assertEqual(result, (self.MBID, "bar-name", date(2019, 1, 1)))
+        self.assertEqual(result, (self.MBID, "bar-name", "2019-01-01"))
     
     def test_extracts_other_date(self):
         tags = {
@@ -24,7 +24,7 @@ class ExtractalbumInfoTests(SimpleTestCase):
             "originaldate": ["2019"]
         }
         result = extract_album_info(tags)
-        self.assertEqual(result, (self.MBID, "bar-name", date(2019, 1, 1)))
+        self.assertEqual(result, (self.MBID, "bar-name", "2019-01-01"))
 
     def test_returns_none_when_all_data_missing(self):
         tags = {}
@@ -44,7 +44,7 @@ class ExtractalbumInfoTests(SimpleTestCase):
             "originaldate": ["2019"]
         }
         result = extract_album_info(tags)
-        self.assertEqual(result, (None, None, date(2019, 1, 1)))
+        self.assertEqual(result, (None, None, "2019-01-01"))
 
     def test_returns_partial_tuple_for_only_name(self):
         tags = {
@@ -67,4 +67,4 @@ class ExtractalbumInfoTests(SimpleTestCase):
             "originaldate": ["2019"]
         }
         result = extract_album_info(tags)
-        self.assertEqual(result, (None, "bar-name", date(2019, 1, 1)))
+        self.assertEqual(result, (None, "bar-name", "2019-01-01"))

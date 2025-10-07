@@ -83,7 +83,7 @@ class ExtractDataFromJsonStrTests(TestCase):
         result = tph.extract_data_from_json_str(modified_json)
         self.assertEqual(
             result["album_info"],
-            ("11223344-5566-7788-99aa-bbccddeeff00", None, date(2005,7,14)),
+            ("11223344-5566-7788-99aa-bbccddeeff00", None, "2005-07-14"),
         )
 
     def test_empty_title(self):
