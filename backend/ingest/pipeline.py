@@ -1,19 +1,17 @@
 # Data Processing for Music Recommendation System
 from datetime import date
-import os, time, gc, copy, uuid, shutil
+import os, time, gc, uuid, shutil
 import numpy as np
 import pandas as pd
 from . import track_processing_helpers as tph
 from collections import Counter, defaultdict
-from concurrent.futures import ThreadPoolExecutor
 from django.db import transaction, connection
 from dotenv import dotenv_values
-from itertools import chain
 from pathlib import Path
 from sklearn.preprocessing import StandardScaler
 from recommend_api.models import Track, Artist, TrackArtist, Album, AlbumArtist
 from pympler import asizeof
-from typing import DefaultDict, List, Set, Tuple
+from typing import List, Set, Tuple
 from .lmdb_index import LMDBTrackIndex
 
 
@@ -121,15 +119,15 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     os.makedirs(lmdb_dir, exist_ok=True)
     track_index = LMDBTrackIndex(lmdb_dir, map_size=MAP_SIZE)
 
-    with ThreadPoolExecutor(max_workers=WORKERS) as executor:
-        # Process file-by-file (individual JSONs)
-        if len(archive_paths) < 1:
-            for parsed in executor.map(tph.process_file, json_paths, chunksize=512):
-                ingest_parsed_track(parsed, track_index, counters)
-        else:
-            # Process archive-by-archive
-            streams = executor.map(lambda path: tph.iter_archive(path, limit=None), archive_paths)
-            for parsed in chain.from_iterable(streams):
+    # Process file-by-file (individual JSONs)
+    if len(archive_paths) < 1:
+        for json_path in json_paths:
+            parsed = tph.process_file(json_path)
+            ingest_parsed_track(parsed, track_index, counters)
+    else:
+        # Process archive-by-archive
+        for archive_path in archive_paths:
+            for parsed in tph.iter_archive(archive_path, limit=None):
                 ingest_parsed_track(parsed, track_index, counters)
 
     # Ensure pending transactions are committed to store
