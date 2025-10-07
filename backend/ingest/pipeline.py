@@ -303,10 +303,10 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     end = time.time()
     print(f"Built Track models in {end - start:.2f}s, now running the ORM inserts.")
     print(f"Size of Track models {asizeof.asizeof(track_list) / 1024**2:.2f} MB.")
-    print(f"Found {track_index.stats["duplicates"]:,} duplicate submissions.")
+    print(f"Found {track_index.stats['duplicates']:,} duplicate submissions.")
     print(f"Found {tph.invalid_date_count:,} submissions with invalid dates.")
     print(f"Found {tph.missing_data_count:,} submissions with missing data.")
-    print(f"Dropped {counters["missing_artist"]:,} tracks with no artist.")
+    print(f"Dropped {counters['missing_artist']:,} tracks with no artist.")
     zero_year_count = sum(row[3] == 0 for row in track_features_list)
     print(f"Tracks with year=0: {zero_year_count} / {len(track_features_list)}")
 
