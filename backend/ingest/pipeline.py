@@ -157,9 +157,10 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     ]
 
     merged_count = 0
-    track_index_keys = track_index.keys()
-    track_index_keys_count = len(track_index_keys)
-    for mbid in track_index_keys:
+    track_index_keys = track_index.keys_np()
+    track_index_keys_count = track_index_keys.size
+    for mbid_raw in track_index_keys:
+        mbid = str(uuid.UUID(bytes=mbid_raw.tobytes()))
         # Show progress bar
         merged_count += 1 
         show_progress_bar(merged_count, track_index_keys_count, message="Merging:")
@@ -209,10 +210,13 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         track_index[mbid] = [base_track]
         del tracks
 
+
     # Ensure pending transactions are committed to store
     track_index.flush()
     end = time.time()
     print(f"\nFinished merging tracks in {end - start:.2f}s")
+    print(f"Size of track index keys: {asizeof.asizeof(track_index_keys) / 1024**2:.2f} MB")
+    del track_index_keys
 
     ## NOTE: Phase 3 - Build the DB models
 
@@ -298,6 +302,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     
     end = time.time()
     print(f"Built Track models in {end - start:.2f}s, now running the ORM inserts.")
+    print(f"Size of Track models {asizeof.asizeof(track_list) / 1024**2:.2f} MB.")
     print(f"Found {track_index.stats["duplicates"]:,} duplicate submissions.")
     print(f"Found {tph.invalid_date_count:,} submissions with invalid dates.")
     print(f"Found {tph.missing_data_count:,} submissions with missing data.")
@@ -365,7 +370,7 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
         for i in range(0, len(trackartist_list), BATCH_SIZE):
             TrackArtist.objects.bulk_create(trackartist_list[i:i+BATCH_SIZE], batch_size=BATCH_SIZE)
             show_progress_bar(i, len(trackartist_list), BATCH_SIZE, message="Inserting TrackArtist:")
-
+        print("")
         for i in range(0, len(albumartist_list), BATCH_SIZE):
             AlbumArtist.objects.bulk_create(albumartist_list[i:i+BATCH_SIZE], batch_size=BATCH_SIZE)
             show_progress_bar(i, len(albumartist_list), BATCH_SIZE, message="Inserting AlbumArtist:")

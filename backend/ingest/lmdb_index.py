@@ -1,7 +1,9 @@
-from collections import defaultdict
 import lmdb, orjson, uuid
 import zstandard as zstd
-
+import numpy as np
+from collections import defaultdict
+from numpy.typing import NDArray
+from typing import Iterator
 
 class LMDBTrackIndex:
     """
@@ -99,7 +101,7 @@ class LMDBTrackIndex:
             self._txn.commit()
             self._txn = None
 
-    def get(self, key: str, default=None):
+    def get(self, key: str, default=None) -> list:
         key_bytes = self._serialize_key(key)
 
         txn = self._txn if self._txn is not None else self.env.begin(db=self.db)
@@ -108,25 +110,38 @@ class LMDBTrackIndex:
             return default if default is not None else []
         return self._deserialize_values(val)
 
-    def __getitem__(self, key: str):
+    def __getitem__(self, key: str) -> list:
         result = self.get(key)
         if not result:
             raise KeyError(key)
         return result
 
-    def items(self):
+    def items(self) -> Iterator[tuple[str, list]]:
         with self.env.begin(db=self.db) as txn:
             with txn.cursor() as cur:
                 for key_bytes, values_bytes in cur:
                     yield self._deserialize_key(key_bytes), self._deserialize_values(values_bytes)
 
-    def keys(self):
+    def keys(self) -> set[str]:
         with self.env.begin(db=self.db) as txn:
             with txn.cursor() as cur:
                 return set(
                     self._deserialize_key(key)
                     for key in cur.iternext(keys=True, values=False)
                 )
+            
+    def keys_np(self) -> NDArray[np.bytes_]:
+        """Return all keys as a NumPy array of fixed-size 16-byte records (UUID bytes)."""
+        with self.env.begin(db=self.db) as txn:
+            stat = txn.stat()
+            n = stat["entries"]
+            arr = np.empty(n, dtype="V16")
+            with txn.cursor() as cur:
+                i = 0
+                for key, _ in cur:
+                    arr[i] = np.frombuffer(key, dtype="V16")
+                    i += 1
+        return arr
             
     def first_key(self) -> str | None:
         with self.env.begin(db=self.db) as txn:
@@ -136,13 +151,13 @@ class LMDBTrackIndex:
                     return self._deserialize_key(key_bytes)
                 return None
 
-    def values(self):
+    def values(self) -> Iterator[list]:
         with self.env.begin(db=self.db) as txn:
             with txn.cursor() as cur:
                 for _, values_bytes in cur:
                     yield self._deserialize_values(values_bytes)
 
-    def first_value(self, raw=False):
+    def first_value(self, raw=False) -> tuple | None:
         with self.env.begin(db=self.db) as txn:
             with txn.cursor() as cur:
                 if cur.first():
@@ -164,10 +179,10 @@ class LMDBTrackIndex:
         self.flush()
         self.env.close()
 
-    def size_pages(self):
+    def size_pages(self) -> int:
         with self.env.begin(db=self.db) as txn:
             st = txn.stat()
             return (st["branch_pages"] + st["leaf_pages"] + st["overflow_pages"]) * st["psize"]
 
-    def map_size(self):
+    def map_size(self) -> int:
         return self.env.info()["map_size"]
