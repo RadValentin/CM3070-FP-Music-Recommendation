@@ -1,10 +1,8 @@
-import re, os, orjson, json, tarfile, uuid
-import numpy as np
+import re, os, orjson, tarfile, uuid
 import zstandard as zstd
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from statistics import median_low
-from typing import NamedTuple
 
 mute_logs = False
 logfile_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ingest.log")
