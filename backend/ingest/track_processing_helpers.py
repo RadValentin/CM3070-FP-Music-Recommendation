@@ -2,13 +2,16 @@ import re, os, orjson, json, tarfile, uuid
 import numpy as np
 import zstandard as zstd
 from collections import Counter, defaultdict
-from datetime import datetime, date
+from datetime import datetime, timezone
 from statistics import median_low
 from typing import NamedTuple
 
 mute_logs = False
+logfile_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ingest.log")
 invalid_date_count = 0
 missing_data_count = 0
+missing_title_count = 0
+invalid_mbid_count = 0
 
 # Columns of multi-value features, we want to ensure same order is used when they're processed
 # For moods_mirex
@@ -28,7 +31,7 @@ FEATURE_FIELDS = [
 ]
 FEATURE_INDEX = {name: i for i, name in enumerate(FEATURE_FIELDS)}
 
-
+# TODO: This should be parse/extract_mbid and should validate + return normalized if valid
 def is_mbid(s: str) -> bool:
     """
     Check if a string is a valid 36 character MBID
@@ -49,10 +52,27 @@ def is_mbid(s: str) -> bool:
 
 
 def log(message: str) -> None:
+    """Log a message to stdout (unless muted) and append it to ingest.log.
+
+    Each call appends a timestamped line to ``ingest.log`` in the same directory
+    as this module. File write errors are swallowed to avoid breaking the
+    ingestion pipeline.
+    """
     global mute_logs
 
+    # Print to stdout unless muted
     if not mute_logs:
         print(message)
+    
+    if logfile_path:
+        timestamp = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+        line = f"[{timestamp}] {message}\n"
+        # Append to log file
+        try:
+            with open(logfile_path, "a", encoding="utf-8") as f:
+                f.write(line)
+        except Exception:
+            pass
 
 
 def parse_flexible_date(date_str: str = None) -> str | None:
@@ -145,6 +165,7 @@ def extract_artist_info(tags: dict) -> list[tuple[str, str]]:
     # Keep track of all artists inside an index
     for idx, artist_id in enumerate(artist_ids):
         artist_id = artist_id.strip()
+        # TODO: Normalize MBID
         if is_mbid(artist_id):
             artists.append((artist_id, tags[artist_key][idx]))
 
@@ -169,7 +190,8 @@ def extract_album_info(tags: dict) -> tuple[str | None, str | None, str | None] 
 
     if not release_date:
         invalid_date_count += 1
-
+    
+    # TODO: Normalize MBID
     if not (album_id and is_mbid(album_id)) and not album_name and not release_date:
         return None
 
@@ -200,6 +222,8 @@ def extract_data_from_json_str(json_str: str, file_path: str | None = None) -> d
     - album_info: a tuple (album_id, album_name, release_date), the album the track is on
     """
     global missing_data_count
+    global missing_title_count
+    global invalid_mbid_count
 
     try:
         data = orjson.loads(json_str)
@@ -213,15 +237,19 @@ def extract_data_from_json_str(json_str: str, file_path: str | None = None) -> d
     tags = metadata.get("tags") or {}
 
     try:
+        # TODO: Normalize MBID
         mbid = tags.get("musicbrainz_recordingid", [None])[0]
         if not mbid:
+            invalid_mbid_count += 1
             raise ValueError(f"missing musicbrainz_recordingid")
         elif not is_mbid(mbid):
+            invalid_mbid_count += 1
             raise ValueError(f"bad MBID: {mbid}")
         
         # TODO: Strip leading and trailing single/double quotes
         title = tags.get("title", [None])[0]
         if not title:
+            missing_title_count += 1
             raise ValueError("missing title")
 
         # High-level features     

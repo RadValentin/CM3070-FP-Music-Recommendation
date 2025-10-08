@@ -41,12 +41,14 @@ def show_progress_bar(done: int, total: int, step=10000, message: str = ""):
 def build_database(use_sample: bool, show_log: bool, num_parts: int = None, parts_list: list = None):
     # Size of on-disk track index, set an arbitrary default 2GB
     MAP_SIZE = 1024 * 1024 * 1024 * 2
-    WORKERS = max(8, (os.cpu_count() or 8))
     BASE_DIR = Path(__file__).resolve().parent.parent
     config = dotenv_values(BASE_DIR / ".env")
-    # globals used to track how many records are skipped while processing
+    # Globals used to track how many records are skipped while processing
     counters = {"missing_artist": 0, "processing": 0}
+    # Don't show logs in console, they'll be logged to a file, clear the file at the start
     tph.mute_logs = not show_log
+    if os.path.exists(tph.logfile_path):
+        os.remove(tph.logfile_path)
 
     ## NOTE: Phase 1 - Load JSON data about tracks into memory
 
@@ -303,7 +305,9 @@ def build_database(use_sample: bool, show_log: bool, num_parts: int = None, part
     print(f"Size of Track models {asizeof.asizeof(track_list) / 1024**2:.2f} MB.")
     print(f"Found {track_index.stats['duplicates']:,} duplicate submissions.")
     print(f"Found {tph.invalid_date_count:,} submissions with invalid dates.")
-    print(f"Found {tph.missing_data_count:,} submissions with missing data.")
+    print(f"Found {tph.missing_data_count:,} submissions with missing data:")
+    print(f"  - {tph.invalid_mbid_count:,} invalid MBIDs")
+    print(f"  - {tph.missing_title_count:,} missing title")
     print(f"Dropped {counters['missing_artist']:,} tracks with no artist.")
     zero_year_count = sum(row[3] == 0 for row in track_features_list)
     print(f"Tracks with year=0: {zero_year_count} / {len(track_features_list)}")
