@@ -2,8 +2,8 @@ from django.test import SimpleTestCase
 from datetime import date
 from ingest.track_processing_helpers import merge_album_info
 
+
 class MergeAlbumInfoTests(SimpleTestCase):
-    
     def test_merges_to_most_common_id(self):
         tracks = [
             {"album_info": ("id1", "Album One", "2000-01-01")},
