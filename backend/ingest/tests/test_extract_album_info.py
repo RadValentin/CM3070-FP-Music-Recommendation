@@ -1,10 +1,8 @@
 from django.test import SimpleTestCase
 from ingest.track_processing_helpers import extract_album_info
-from datetime import datetime, date
 
 
-
-class ExtractalbumInfoTests(SimpleTestCase):
+class ExtractAlbumInfoTests(SimpleTestCase):
     def setUp(self):
         self.MBID = "53b106e7-0cc6-42cc-ac95-ed8d30a3a98e"
 

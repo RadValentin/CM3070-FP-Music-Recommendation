@@ -6,6 +6,7 @@ import numpy as np
 from dataclasses import dataclass
 from sklearn.metrics.pairwise import cosine_similarity
 
+# TODO: Refactor as a class so we don't pollute the global space
 filename = os.path.join(os.path.dirname(__file__), "../..", "features_and_index.npz")
 try:
     data = np.load(filename, allow_pickle=True)
