@@ -12,11 +12,6 @@ class Command(BaseCommand):
             help="Use the sample dataset instead of full high-level paths.",
         )
         parser.add_argument(
-            "--log",
-            action="store_true",
-            help="Display parsing errors in console (for debugging)",
-        )
-        parser.add_argument(
             "--parts",
             type=int,
             default=None,
@@ -37,7 +32,6 @@ class Command(BaseCommand):
 
             build_database(
                 use_sample=options["sample"],
-                show_log=options["log"],
                 num_parts=options["parts"],
                 parts_list=parts_list
             )

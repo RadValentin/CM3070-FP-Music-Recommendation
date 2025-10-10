@@ -10,7 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
-import sys
+import sys, logging
 from pathlib import Path
 from dotenv import dotenv_values
 
@@ -182,9 +182,13 @@ CORS_ALLOW_HEADERS = [
 
 # Custom settings for running tests
 if "test" in sys.argv:
+    # Run tests using SQLite DB for simplicity
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
        },
     }
+
+    # Disable logging
+    logging.disable(logging.WARNING)

@@ -13,4 +13,4 @@ from ingest.pipeline import build_database
 from ingest.lmdb_index import LMDBTrackIndex
 import ingest.track_processing_helpers as tph
 
-build_database(use_sample=True, show_log=False)
+build_database(use_sample=True)

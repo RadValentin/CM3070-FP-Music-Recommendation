@@ -1,11 +1,10 @@
-import re, os, orjson, tarfile, uuid
+import re, os, orjson, tarfile, uuid, logging
 import zstandard as zstd
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from statistics import median_low
 
-mute_logs = False
-logfile_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ingest.log")
+log = logging.getLogger(__name__)
 invalid_date_count = 0
 missing_data_count = 0
 missing_title_count = 0
@@ -47,30 +46,6 @@ def is_mbid(s: str) -> bool:
         return True
     except ValueError:
         return False
-
-
-def log(message: str) -> None:
-    """Log a message to stdout (unless muted) and append it to ingest.log.
-
-    Each call appends a timestamped line to ``ingest.log`` in the same directory
-    as this module. File write errors are swallowed to avoid breaking the
-    ingestion pipeline.
-    """
-    global mute_logs
-
-    # Print to stdout unless muted
-    if not mute_logs:
-        print(message)
-    
-    if logfile_path:
-        timestamp = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
-        line = f"[{timestamp}] {message}\n"
-        # Append to log file
-        try:
-            with open(logfile_path, "a", encoding="utf-8") as f:
-                f.write(line)
-        except Exception:
-            pass
 
 
 def parse_flexible_date(date_str: str = None) -> str | None:
@@ -226,7 +201,7 @@ def extract_data_from_json_str(json_str: str, file_path: str | None = None) -> d
     try:
         data = orjson.loads(json_str)
     except orjson.JSONDecodeError:
-        log(f"Bad JSON string")
+        log.warning(f"Bad JSON string")
         missing_data_count += 1
         return None
 
@@ -284,9 +259,9 @@ def extract_data_from_json_str(json_str: str, file_path: str | None = None) -> d
 
     except (KeyError, IndexError, TypeError, ValueError) as ex:
         if file_path:
-            log(f"Missing data in JSON string ({ex}), path: {os.path.normpath(file_path)}")
+            log.warning(f"Missing data in JSON string ({ex}), path: '{os.path.normpath(file_path)}'")
         else:
-            log(f"Missing data in JSON string ({ex})")
+            log.warning(f"Missing data in JSON string ({ex})")
         missing_data_count += 1
         return None
 
@@ -380,7 +355,7 @@ def process_file(json_path: str) -> dict | None:
             json_string = f.read()
         return extract_data_from_json_str(json_string, json_path)
     except Exception as ex:
-        log(f"Could not process file ({ex}): {os.path.normpath(json_path)}")
+        log.warning(f"Could not process file ({ex}): '{os.path.normpath(json_path)}'")
         return None
 
 
@@ -395,13 +370,13 @@ def stream_json_from_tar_zst(path: str, read_size=2*1024*1024):
                     try:
                         fileobj = tar.extractfile(member)
                         if not fileobj:
-                            log(f"[WARN] Skipping {member.name}")
+                            log.warning(f"Skipping {member.name}")
                             continue
                         with fileobj:
                             data = fileobj.read().decode("utf-8", errors="replace")
                             yield member.name, data
                     except Exception as e:
-                        log(f"[WARN] Failed {member.name}: {e}")                  
+                        log.warning(f"Failed reading archive {member.name}: {e}")                  
 
 def iter_archive(archive_path: str, limit: int | None = None):
     print(f"Loading {os.path.normpath(archive_path)}", end="", flush=True)
