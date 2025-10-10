@@ -1,0 +1,15 @@
+[run]
+branch = True
+source = recommend_api, ingest
+omit =
+    */migrations/*
+    manage.py
+    */settings/*
+
+[report]
+show_missing = True
+skip_covered = True
+fail_under = 80
+
+[html]
+directory = cover_html

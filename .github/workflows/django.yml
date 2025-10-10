@@ -26,6 +26,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-test.txt
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: |
-          python manage.py test
+          coverage run manage.py test
+          coverage report
+          coverage xml -o coverage.xml
+          coverage html
+
+      - name: Upload HTML coverage (artifact)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: backend/cover_html/
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: backend/coverage.xml
+          fail_ci_if_error: true
+          verbose: true
