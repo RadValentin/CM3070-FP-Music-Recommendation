@@ -5,6 +5,8 @@ omit =
     */migrations/*
     manage.py
     */settings/*
+    */debug_*.py
+
 
 [report]
 show_missing = True
