@@ -37,7 +37,7 @@ class SimilarTracksAPITests(APITestCase):
         ArtistFactory.reset_sequence(0)
         TrackFactory.reset_sequence(0)
 
-    @patch("recommend_api.api.rec.recommend")
+    @patch("recommend_api.api.recommend.rec.recommend")
     def test_response_signature(self, mock_rec):
         mock_rec.return_value = self.recommend_response
         url = reverse("api:recommend")
