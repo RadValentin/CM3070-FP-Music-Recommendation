@@ -20,11 +20,13 @@ class ArtistViewSet(viewsets.ReadOnlyModelViewSet):
     ordering_fields = ["name"]
     ordering = ["pk"]
 
-    def get_data(self, Model, Serializer, order_by: str = None):
+    def get_data(self, Model, Serializer, order_by: str = None, order: str = "desc"):
         artist = self.get_object()
         if order_by is not None:
             tracks = Model.objects.filter(artists=artist).order_by(
                 F(order_by).desc(nulls_last=True)
+                if order == "desc"
+                else F(order_by).asc(nulls_last=True)
             )
         else:
             tracks = Model.objects.filter(artists=artist)
@@ -43,7 +45,7 @@ class ArtistViewSet(viewsets.ReadOnlyModelViewSet):
     )
     @action(detail=True, methods=["get"], url_path="tracks")
     def tracks(self, request, *args, **kwargs):
-        return self.get_data(Track, TrackSerializer, order_by=None)
+        return self.get_data(Track, TrackSerializer, order_by="title", order="asc")
 
     @extend_schema(
         responses=TrackSerializer,
