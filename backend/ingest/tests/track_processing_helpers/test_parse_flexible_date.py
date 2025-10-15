@@ -22,6 +22,9 @@ class ParseFlexibleDateTests(SimpleTestCase):
     
     def test_parse_year_only(self):
         self.assertEqual(parse_flexible_date("1994"), "1994-01-01")
+
+    def test_parse_incomplete_date(self):
+        self.assertEqual(parse_flexible_date("1984-1"), "1984-01-01")
     
     def test_dont_parse_empty(self):
         self.assertEqual(parse_flexible_date(), None)
@@ -34,6 +37,10 @@ class ParseFlexibleDateTests(SimpleTestCase):
 
     def test_dont_parse_char_date(self):
         self.assertEqual(parse_flexible_date("YOLO"), None)
+
+    def test_dont_parse_invalid_date(self):
+        self.assertEqual(parse_flexible_date("0000-00-00"), None)
+        self.assertEqual(parse_flexible_date("0001"), None)
 
     def test_dont_parse_ancient_date(self):
         self.assertEqual(parse_flexible_date(f"{MIN_YEAR-1}"), None)
