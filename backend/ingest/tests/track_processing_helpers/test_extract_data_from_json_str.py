@@ -1,14 +1,8 @@
 from django.test import TestCase
-from datetime import date
 import ingest.track_processing_helpers as tph
 import orjson
 
 class ExtractDataFromJsonStrTests(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        tph.mute_logs = True
-        return super().setUpClass()
-
     def setUp(self):
         # Minimal valid JSON structure
         self.valid_json = orjson.dumps({

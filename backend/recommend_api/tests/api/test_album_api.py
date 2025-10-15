@@ -1,11 +1,12 @@
 from django.urls import reverse
 from rest_framework.test import APITestCase
-from recommend_api.models import Album, Artist, Track
+from recommend_api.models import Album, Track
 from recommend_api.tests.factories import TrackFactory, AlbumFactory
-from pprint import pprint
+
 
 class AlbumAPITests(APITestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(self):
         self.album_a: Album = AlbumFactory.create()
         self.album_b: Album = AlbumFactory.create()
         self.tracks: list[Track] = []
@@ -49,7 +50,8 @@ class AlbumAPITests(APITestCase):
             fetch_redirect_response=False,
         )
 
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(self):
         Album.objects.all().delete()
         Track.objects.all().delete()
         AlbumFactory.reset_sequence(0)

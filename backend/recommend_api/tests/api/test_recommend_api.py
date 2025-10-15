@@ -6,7 +6,8 @@ from recommend_api.tests.factories import ArtistFactory, AlbumFactory, TrackFact
 
 
 class RecommendAPITests(APITestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(self):
         target_artist: Artist = ArtistFactory.create(musicbrainz_artistid="AR1")
         
         tracks: list[Track] = []
@@ -29,7 +30,8 @@ class RecommendAPITests(APITestCase):
             "stats": {"candidate_count": 3, "search_time": 0.01, "mean": 0.5, "std": 0.1, "p95": 0.9, "max": 0.92},
         }
 
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(self):
         Album.objects.all().delete()
         Artist.objects.all().delete()
         Track.objects.all().delete()
