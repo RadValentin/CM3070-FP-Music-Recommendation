@@ -5,18 +5,18 @@ from recommend_api.models import Album, Artist, Track
 from recommend_api.tests.factories import ArtistFactory, AlbumFactory, TrackFactory
 
 
-class SimilarTracksAPITests(APITestCase):
+class RecommendAPITests(APITestCase):
     def setUp(self):
-        target_artist = ArtistFactory(musicbrainz_artistid="AR1")
+        target_artist: Artist = ArtistFactory.create(musicbrainz_artistid="AR1")
         
-        tracks = []
+        tracks: list[Track] = []
         for mbid, title in [("A", "Song A"), ("B", "Song B"), ("C", "Song C")]:
-            new_track = TrackFactory(musicbrainz_recordingid=mbid, title=title)
+            new_track: Track = TrackFactory.create(musicbrainz_recordingid=mbid, title=title)
             new_track.artists.add(target_artist)
             tracks.append(new_track)
 
-        self.target_track = tracks[0]
-        self.similar_tracks = tracks[1:]
+        self.target_track: Track = tracks[0]
+        self.similar_tracks: Track = tracks[1:]
         # Mock data returned by recommender.recommend
         self.recommend_response = {
             "target_year": 1991,
