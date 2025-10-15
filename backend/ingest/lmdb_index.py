@@ -9,6 +9,8 @@ class LMDBTrackIndex:
     """
     Disk-based index that stores track data grouped by their MusicBrainz ID (mbid), a 36 character 
     string in UUID format. Interface mimics standard Python dict.
+
+    External API view: `uuid-key: [ {item1}, {item2}, ... ]`
     
     Keys are internally they're serialized to bytes. Externally they're strings.
     Values are stored compressed (optional) and serialized to JSON bytes. Externally they're 
@@ -101,20 +103,17 @@ class LMDBTrackIndex:
             self._txn.commit()
             self._txn = None
 
-    def get(self, key: str, default=None) -> list:
+    def get(self, key: str, default=None) -> list | None:
         key_bytes = self._serialize_key(key)
 
         txn = self._txn if self._txn is not None else self.env.begin(db=self.db)
         val = txn.get(key_bytes)
         if val is None:
-            return default if default is not None else []
+            return default
         return self._deserialize_values(val)
 
-    def __getitem__(self, key: str) -> list:
-        result = self.get(key)
-        if not result:
-            raise KeyError(key)
-        return result
+    def __getitem__(self, key: str) -> list | None:
+        return self.get(key)
 
     def items(self) -> Iterator[tuple[str, list]]:
         with self.env.begin(db=self.db) as txn:
