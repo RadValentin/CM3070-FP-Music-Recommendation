@@ -6,6 +6,7 @@ omit =
     manage.py
     */settings/*
     */debug_*.py
+    ingest/pipeline.py
 
 
 [report]
