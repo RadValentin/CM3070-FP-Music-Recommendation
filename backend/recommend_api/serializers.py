@@ -84,11 +84,20 @@ class TrackFeaturesResponseSerializer(serializers.Serializer):
     raw_features = serializers.DictField()
 
 
+class AlbumTrackSerializer(TrackSerializer):
+    """For showing tracks belonging to an album. The `album` field is omitted as it's redundant."""
+    class Meta(TrackSerializer.Meta):
+        fields = [f for f in TrackSerializer.Meta.fields if f != "album"]
+
 class AlbumResponseSerializer(AlbumSerializer):
-    tracks = TrackSerializer(many=True)
+    tracks = serializers.SerializerMethodField()
 
     class Meta(AlbumSerializer.Meta):
         fields = AlbumSerializer.Meta.fields + ["tracks"]
+    
+    def get_tracks(self, obj):
+        qs = Track.objects.filter(album=obj).prefetch_related("artists")
+        return AlbumTrackSerializer(qs, many=True, context=self.context).data
 
 
 class SimilarTrackSerializer(TrackSerializer):

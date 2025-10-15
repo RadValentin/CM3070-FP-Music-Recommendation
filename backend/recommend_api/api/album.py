@@ -26,19 +26,7 @@ class AlbumViewSet(viewsets.ReadOnlyModelViewSet):
     )
     def retrieve(self, request, *args, **kwargs):
         album = self.get_object()
-        album_data = self.get_serializer(album).data
-
-        # Get all tracks in this album
-        tracks = Track.objects.filter(album=album).prefetch_related("artists")
-        tracks_data = TrackSerializer(tracks, many=True).data
-
-        # Remove 'album' key from each track dict as it's redundant
-        for track in tracks_data:
-            track.pop("album", None)
-
-        # Add tracks to the response
-        album_data["tracks"] = tracks_data
-        serializer = AlbumResponseSerializer(album_data)
+        serializer = AlbumResponseSerializer(album, context={"request": request})
         return Response(serializer.data)
     
     @extend_schema(
