@@ -2,6 +2,7 @@
 branch = True
 source = recommend_api, ingest
 omit =
+    */__init__.py
     */migrations/*
     manage.py
     */settings/*
