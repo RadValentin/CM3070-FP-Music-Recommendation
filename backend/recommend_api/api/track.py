@@ -29,7 +29,7 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
     )
     @action(detail=True, methods=["get"], url_path="features")
     def features(self, request, *args, **kwargs):
-        track = self.get_object()
+        track: Track = self.get_object()
         mbid = track.musicbrainz_recordingid
         index = np.where(rec.mbid_to_idx == mbid)[0]
         features = rec.feature_matrix[index][0]
