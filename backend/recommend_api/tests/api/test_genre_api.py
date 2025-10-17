@@ -9,7 +9,7 @@ class GenreAPITests(APITestCase):
     def setUpClass(cls):
         cls.dortmund = ["rock", "pop", "metal", "pop", "metal", "rock", "metal"]
         cls.rosamerica = ["pop", "roc", "rhy", "roc", "rhy", "rhy", "pop"]
-        cls.tracks = []
+        cls.tracks: list[Track] = []
         for i in range(len(cls.dortmund)):
             cls.tracks.append(
                 TrackFactory.create(
@@ -26,4 +26,5 @@ class GenreAPITests(APITestCase):
 
     @classmethod
     def tearDownClass(cls):
-        pass
+        Track.objects.all().delete()
+        TrackFactory.reset_sequence(0)
