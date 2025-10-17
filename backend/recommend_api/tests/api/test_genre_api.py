@@ -6,14 +6,14 @@ from recommend_api.tests.factories import TrackFactory, ArtistFactory, AlbumFact
 
 class GenreAPITests(APITestCase):
     @classmethod
-    def setUpClass(self):
-        self.dortmund = ["rock", "pop", "metal", "pop", "metal", "rock", "metal"]
-        self.rosamerica = ["pop", "roc", "rhy", "roc", "rhy", "rhy", "pop"]
-        self.tracks = []
-        for i in range(len(self.dortmund)):
-            self.tracks.append(
+    def setUpClass(cls):
+        cls.dortmund = ["rock", "pop", "metal", "pop", "metal", "rock", "metal"]
+        cls.rosamerica = ["pop", "roc", "rhy", "roc", "rhy", "rhy", "pop"]
+        cls.tracks = []
+        for i in range(len(cls.dortmund)):
+            cls.tracks.append(
                 TrackFactory.create(
-                    genre_dortmund=self.dortmund[i], genre_rosamerica=self.rosamerica[i]
+                    genre_dortmund=cls.dortmund[i], genre_rosamerica=cls.rosamerica[i]
                 )
             )
 
@@ -25,5 +25,5 @@ class GenreAPITests(APITestCase):
         self.assertCountEqual(resp.data["genre_rosamerica"], set(self.rosamerica))
 
     @classmethod
-    def tearDownClass(self):
+    def tearDownClass(cls):
         pass

@@ -6,14 +6,14 @@ from recommend_api.tests.factories import TrackFactory, ArtistFactory, AlbumFact
 
 class ArtistAPITests(APITestCase):
     @classmethod
-    def setUpClass(self):
-        self.artist_a: Artist = ArtistFactory.create()
-        self.artist_b: Artist = ArtistFactory.create()
+    def setUpClass(cls):
+        cls.artist_a: Artist = ArtistFactory.create()
+        cls.artist_b: Artist = ArtistFactory.create()
         
-        self.album: Album = AlbumFactory.create()
-        self.album.artists.add(self.artist_a)
+        cls.album: Album = AlbumFactory.create()
+        cls.album.artists.add(cls.artist_a)
         
-        self.tracks: list[Track] = []
+        cls.tracks: list[Track] = []
         for mbid, title, subs in [
             ("A", "Song A", 1), ("B", "Song B", 2), ("C", "Song C", 3), ("D", "Song D", 4)
         ]:
@@ -21,10 +21,10 @@ class ArtistAPITests(APITestCase):
                 musicbrainz_recordingid=mbid, title=title, submissions=subs
             )
             if mbid == "A" or mbid == "B":
-                new_track.artists.add(self.artist_a)
+                new_track.artists.add(cls.artist_a)
             else:
-                new_track.artists.add(self.artist_b)
-            self.tracks.append(new_track)
+                new_track.artists.add(cls.artist_b)
+            cls.tracks.append(new_track)
 
     def test_get_list(self):
         url = reverse("api:artist-list")
@@ -67,7 +67,7 @@ class ArtistAPITests(APITestCase):
         self.assertEqual(resp.data["results"][0]["mbid"], self.album.musicbrainz_albumid)
 
     @classmethod
-    def tearDownClass(self):
+    def tearDownClass(cls):
         Album.objects.all().delete()
         Artist.objects.all().delete()
         Track.objects.all().delete()

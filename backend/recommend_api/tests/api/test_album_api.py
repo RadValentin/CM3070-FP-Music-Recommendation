@@ -6,20 +6,20 @@ from recommend_api.tests.factories import TrackFactory, AlbumFactory
 
 class AlbumAPITests(APITestCase):
     @classmethod
-    def setUpClass(self):
-        self.album_a: Album = AlbumFactory.create()
-        self.album_b: Album = AlbumFactory.create()
-        self.tracks: list[Track] = []
+    def setUpClass(cls):
+        cls.album_a: Album = AlbumFactory.create()
+        cls.album_b: Album = AlbumFactory.create()
+        cls.tracks: list[Track] = []
         for mbid, title in [("A", "Song A"), ("B", "Song B"), ("C", "Song C"), ("D", "Song D")]:
             if mbid == "A" or mbid == "B":
                 new_track: Track = TrackFactory.create(
-                    musicbrainz_recordingid=mbid, title=title, album=self.album_a
+                    musicbrainz_recordingid=mbid, title=title, album=cls.album_a
                 )
             else:
                 new_track: Track = TrackFactory.create(
-                    musicbrainz_recordingid=mbid, title=title, album=self.album_b
+                    musicbrainz_recordingid=mbid, title=title, album=cls.album_b
                 )
-            self.tracks.append(new_track)
+            cls.tracks.append(new_track)
 
     def test_get_list(self):
         url = reverse("api:album-list")
@@ -51,7 +51,7 @@ class AlbumAPITests(APITestCase):
         )
 
     @classmethod
-    def tearDownClass(self):
+    def tearDownClass(cls):
         Album.objects.all().delete()
         Track.objects.all().delete()
         AlbumFactory.reset_sequence(0)
