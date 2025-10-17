@@ -24,26 +24,26 @@ class RecommendView(GenericAPIView):
         # Process options
         serializer = RecommendRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        target_mbid = serializer.validated_data.get("mbid")
+        target_mbid: str = serializer.validated_data.get("mbid")
         if not target_mbid:
             return Response(
                 {"detail": "Missing 'mbid' parameter."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        listened_mbids = serializer.validated_data.get("listened_mbids", [])
-        filters = serializer.validated_data.get("filters", {})
-        feature_weights = serializer.validated_data.get("feature_weights", {})
-        total_weights = serializer.validated_data.get("total_weights", {})
-        limit = serializer.validated_data.get("limit", 10)
-        limit = min(limit, 50)
-        use_ros = filters.get("genre_classification", "rosamerica") == "rosamerica"
-        same_genre = filters.get("same_genre", True)
-        same_decade = filters.get("same_decade", True)
+        listened_mbids: list = serializer.validated_data.get("listened_mbids", [])
+        filters: dict = serializer.validated_data.get("filters", {})
+        feature_weights: dict = serializer.validated_data.get("feature_weights", {})
+        total_weights: dict = serializer.validated_data.get("total_weights", {})
+        limit: int = serializer.validated_data.get("limit", 10)
+        limit: int = min(limit, 50)
+        use_ros: bool = filters.get("genre_classification", "rosamerica") == "rosamerica"
+        same_genre: bool = filters.get("same_genre", True)
+        same_decade: bool = filters.get("same_decade", True)
 
         try:
-            target_track = Track.objects.get(musicbrainz_recordingid=target_mbid)
-            target_artist = target_track.artists.first()
+            target_track: Track = Track.objects.get(musicbrainz_recordingid=target_mbid)
+            target_artist: Artist = target_track.artists.first()
         except Track.DoesNotExist:
             return Response(
                 {"detail": "Target track not found"}, status=status.HTTP_404_NOT_FOUND
@@ -75,9 +75,9 @@ class RecommendView(GenericAPIView):
             )
         except Exception as e:
             # Any other error
-            log.exception("Unexpected error in similar_tracks")
+            log.exception(f"Unexpected error in similar_tracks: {e}")
             return Response(
-                {"detail": "Unexpected error."},
+                {"detail": f"Unexpected error: {e}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -122,10 +122,7 @@ class RecommendView(GenericAPIView):
             artist_name = artist.name if artist else "Unknown Artist"
 
             # Skip if it's the same song by the same artist as the target track
-            if (
-                artist_name == target_artist.name
-                and track_obj.title == target_track.title
-            ):
+            if (artist_name == target_artist.name and track_obj.title == target_track.title):
                 continue
             
             # Only allow 1 track per artist
