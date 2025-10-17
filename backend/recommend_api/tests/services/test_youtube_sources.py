@@ -23,16 +23,16 @@ class YoutubeSourcesTests(TestCase):
         }
         
         # Mocks
-        patched_dotenv = patch("recommend_api.services.youtube_sources.dotenv_values", 
+        self.patched_dotenv = patch("recommend_api.services.youtube_sources.dotenv_values", 
                                  return_value={"YOUTUBE_API_KEY": self.mock_yt_api_key})
-        self.mock_dotenv = patched_dotenv.start()
+        self.mock_dotenv = self.patched_dotenv.start()
         
         response = MagicMock()
         response.raise_for_status.return_value = None
         response.json.return_value = self.search_response
-        patched_requests = patch("recommend_api.services.youtube_sources.requests.get", 
+        self.patched_requests = patch("recommend_api.services.youtube_sources.requests.get", 
                                  return_value = response)
-        self.mock_get = patched_requests.start()
+        self.mock_get = self.patched_requests.start()
 
     def test_raises_for_missing_api_key(self):
         self.mock_dotenv.return_value = {}
@@ -69,5 +69,5 @@ class YoutubeSourcesTests(TestCase):
         self.assertIn(json_source["id"]["videoId"], result.url)
 
     def tearDown(self):
-        self.mock_dotenv.stop()
-        self.mock_get.stop()
+        self.patched_dotenv.stop()
+        self.patched_requests.stop()
