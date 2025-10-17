@@ -8,9 +8,9 @@ from recommend_api.tests.factories import ArtistFactory, AlbumFactory, TrackFact
 class SearchAPITests(APITestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tracks = []
-        cls.albums = []
-        cls.artists = []
+        cls.tracks: list[Track] = []
+        cls.albums: list[Album] = []
+        cls.artists: list[Artist] = []
         for i in range(10):
             cls.tracks.append(TrackFactory.create(
                 title=f"Track {'odd' if i % 2 == 1 else 'even'} {i}"
