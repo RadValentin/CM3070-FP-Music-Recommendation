@@ -6,7 +6,7 @@ from recommend_api.tests.factories import TrackFactory, ArtistFactory, AlbumFact
 
 class GenreAPITests(APITestCase):
     @classmethod
-    def setUpClass(cls):
+    def setUpTestData(cls):
         cls.dortmund = ["rock", "pop", "metal", "pop", "metal", "rock", "metal"]
         cls.rosamerica = ["pop", "roc", "rhy", "roc", "rhy", "rhy", "pop"]
         cls.tracks: list[Track] = []
@@ -26,5 +26,5 @@ class GenreAPITests(APITestCase):
 
     @classmethod
     def tearDownClass(cls):
-        Track.objects.all().delete()
+        super().tearDownClass()
         TrackFactory.reset_sequence(0)

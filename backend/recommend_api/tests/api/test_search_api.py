@@ -7,16 +7,18 @@ from recommend_api.tests.factories import ArtistFactory, AlbumFactory, TrackFact
 
 class SearchAPITests(APITestCase):
     @classmethod
-    def setUpClass(cls):
+    def setUpTestData(cls):
         cls.tracks: list[Track] = []
         cls.albums: list[Album] = []
         cls.artists: list[Artist] = []
         for i in range(10):
-            cls.tracks.append(TrackFactory.create(
-                title=f"Track {'odd' if i % 2 == 1 else 'even'} {i}"
-            ))
-            cls.albums.append(AlbumFactory.create(
+            new_album = AlbumFactory.create(
                 name=f"Album {'odd' if i % 2 == 1 else 'even'} {i}"
+            )
+            cls.albums.append(new_album)
+            cls.tracks.append(TrackFactory.create(
+                title=f"Track {'odd' if i % 2 == 1 else 'even'} {i}",
+                album=new_album
             ))
             cls.artists.append(ArtistFactory.create(
                 name=f"Artist {'odd' if i % 2 == 1 else 'even'} {i}"
@@ -79,9 +81,7 @@ class SearchAPITests(APITestCase):
 
     @classmethod
     def tearDownClass(cls):
-        Album.objects.all().delete()
-        Artist.objects.all().delete()
-        Track.objects.all().delete()
+        super().tearDownClass()
         AlbumFactory.reset_sequence(0)
         ArtistFactory.reset_sequence(0)
         TrackFactory.reset_sequence(0)

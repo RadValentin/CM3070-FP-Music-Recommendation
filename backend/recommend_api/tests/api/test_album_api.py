@@ -6,7 +6,7 @@ from recommend_api.tests.factories import TrackFactory, AlbumFactory
 
 class AlbumAPITests(APITestCase):
     @classmethod
-    def setUpClass(cls):
+    def setUpTestData(cls):
         cls.album_a: Album = AlbumFactory.create()
         cls.album_b: Album = AlbumFactory.create()
         cls.tracks: list[Track] = []
@@ -52,7 +52,6 @@ class AlbumAPITests(APITestCase):
 
     @classmethod
     def tearDownClass(cls):
-        Album.objects.all().delete()
-        Track.objects.all().delete()
+        super().tearDownClass()
         AlbumFactory.reset_sequence(0)
         TrackFactory.reset_sequence(0)
