@@ -44,7 +44,7 @@ class SearchView(APIView):
             )
 
         is_one_word = len(query.split()) == 1
-        use_trigram = len(query) >= 3
+        use_trigram = len(query) > 3
         if use_trigram:
             if search_type == "track":
                 if is_one_word:
