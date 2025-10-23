@@ -20,7 +20,7 @@ class SearchView(APIView):
         ]
     )
     def get(self, request):
-        start_time = time.time()
+        start_time = time.perf_counter()
         query = request.GET.get("q", "").strip()
         search_type = request.GET.get("type", "track").strip().lower()
         # parse the limit as an int, set an upper bound for it, default to a value for any errors
@@ -96,12 +96,15 @@ class SearchView(APIView):
         #print(str(results.query))
         #print(results.query.explain(using="default", format="text"))
 
+        # materialize results BEFORE calculating response time for accurate timings
+        results = serializer.data
+        end_time = time.perf_counter()
         response_serializer = SearchResponseSerializer({
             "query": query,
             "type": search_type,
             "use_trigram": use_trigram,
-            "response_time": round(time.time() - start_time, 3),
-            "count": len(serializer.data),
-            "results": serializer.data
+            "response_time": end_time - start_time,
+            "count": len(results),
+            "results": results
         })
         return Response(response_serializer.data)

@@ -106,12 +106,12 @@ def recommend(target_mbid, options=None):
     gr = genre_rosamerica[mask]
 
     # Find similar tracks
-    start = time.time()
+    start = time.perf_counter()
     similarities = cosine_similarity(query_vec, fm).flatten()
     # `argsort` returns a list of indexes from the similarities array so that the values corresponding to
     # those indexes are sorted in ascending order.
     top_indexes = similarities.argsort()[::-1][:k]
-    end = time.time()
+    end = time.perf_counter()
 
     # build a list of the top most similar tracks and their metadata
     top_tracks = []
