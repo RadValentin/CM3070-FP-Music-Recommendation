@@ -204,7 +204,7 @@ def build_database(use_sample: bool, num_parts: int = None, parts_list: list = N
             base_track["artist_pairs"] = tph.merge_artist_pairs(tracks)
             base_track["album_info"] = tph.merge_album_info(tracks)
         except Exception as e:
-            # log.warning(f"{e} `{base_track['file_path']}`")
+            # log.warning(f"{e}")
             pass
 
         # Skip tracks that don't have an associated artist.
@@ -254,7 +254,6 @@ def build_database(use_sample: bool, num_parts: int = None, parts_list: list = N
             submissions=track["submissions"],
             # TODO: Handle this after the duplicate artist names are merged.
             artists_text=" ".join([name for _, name in artist_pairs])
-            # file_path=track["file_path"],
         )
         track_list.append(track_obj)
 

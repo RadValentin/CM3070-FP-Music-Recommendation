@@ -47,7 +47,6 @@ class Track(models.Model):
     genre_dortmund = models.CharField(max_length=255)
     genre_rosamerica = models.CharField(max_length=255)
     submissions = models.IntegerField()
-    #file_path = models.CharField(max_length=1024, null=True, blank=True)
     artists_text = models.TextField(default="", blank=True)
     search_vector = SearchVectorField(null=True)
 

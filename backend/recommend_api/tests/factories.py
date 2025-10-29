@@ -37,4 +37,3 @@ class TrackFactory(DjangoModelFactory):
         "rhy", "dan", "pop", "roc", "cla", "hip", "jaz", "spe"
     ]))
     submissions = factory.LazyAttribute(lambda o: randint(1, 100))
-    file_path = factory.Faker("file_path", depth=3, extension="json")
