@@ -21,10 +21,10 @@ log = logging.getLogger(__name__)
 def ingest_parsed_track(result: dict, track_index: LMDBTrackIndex, counters):
     if not result:
         return
-    
+
     track_id = result["musicbrainz_recordingid"]
     track_index.append(track_id, result)
-    
+
     counters["processing"] += 1
     if counters["processing"] % 1000 == 0:
         print(".", end="", flush=True)
@@ -86,7 +86,7 @@ def build_database(use_sample: bool, num_parts: int = None, parts_list: list = N
     if parts_list and len(archive_paths):
         archive_paths = [archive_paths[i] for i in parts_list]
     elif num_parts and len(archive_paths):
-        archive_paths = archive_paths[:num_parts]    
+        archive_paths = archive_paths[:num_parts]
 
     start = time.time()
 
@@ -170,7 +170,7 @@ def build_database(use_sample: bool, num_parts: int = None, parts_list: list = N
     for mbid_raw in track_index_keys:
         mbid = str(uuid.UUID(bytes=mbid_raw.tobytes()))
         # Show progress bar
-        merged_count += 1 
+        merged_count += 1
         show_progress_bar(merged_count, track_index_keys_count, message="Merging:")
 
         tracks = track_index.get(mbid)
@@ -253,7 +253,7 @@ def build_database(use_sample: bool, num_parts: int = None, parts_list: list = N
             genre_rosamerica=track["genre_rosamerica"],
             submissions=track["submissions"],
             # TODO: Handle this after the duplicate artist names are merged.
-            artists_text=" ".join([name for _, name in artist_pairs])
+            artists_text=" ".join(dict.fromkeys(name for _, name in artist_pairs if name))
         )
         track_list.append(track_obj)
 
@@ -353,7 +353,7 @@ def build_database(use_sample: bool, num_parts: int = None, parts_list: list = N
                 track_list[i : i + BATCH_SIZE], batch_size=BATCH_SIZE
             )
             show_progress_bar(i, len(track_list), BATCH_SIZE, message="Inserting Tracks:")
-        
+
         print(f"\nBuilding search vectors for tracks")
         search_vector = (
             SearchVector("title", config="simple", weight="A") +

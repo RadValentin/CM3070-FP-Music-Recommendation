@@ -87,7 +87,7 @@ class SearchView(APIView):
                 remaining = max(0, limit - len(fts_ids))
                 trgm_ids = []
                 if remaining:
-                    log.info(f"Backfilling search for ({query}) with {remaining}/{limit} entries using trigrams.")
+                    log.info("Backfilling search for (%s) with %s/%s entries using trigrams.", query, remaining, limit)
                     is_one_word = len(query.split()) == 1
                     if is_one_word:
                         distance_expr = TrigramWordDistance(query, "title")
@@ -103,7 +103,7 @@ class SearchView(APIView):
                     )
                     # merge results while preserving order
                     trgm_ids = list(trgm_id_qs)
-                
+
                 final_ids = fts_ids + trgm_ids
                 if not final_ids:
                     serializer = TrackSerializer([], many=True)
@@ -118,14 +118,14 @@ class SearchView(APIView):
                     id_to_pos = {pk: pos for pos, pk in enumerate(final_ids)}
                     results_list = sorted(results, key=lambda track: id_to_pos[track.pk])
                     serializer = TrackSerializer(results_list, many=True)
-            if search_type == "artist":
+            elif search_type == "artist":
                 results = (
                     Artist.objects.filter(name__trigram_similar=query)
                     .annotate(distance=TrigramDistance("name", query))
                     .order_by("distance")[:limit]
                 )
                 serializer = ArtistSerializer(results, many=True)
-            if search_type == "album":
+            elif search_type == "album":
                 results = (
                     Album.objects.filter(name__trigram_similar=query)
                     .annotate(distance=TrigramDistance("name", query))
@@ -134,17 +134,17 @@ class SearchView(APIView):
                 )
                 serializer = AlbumSerializer(results, many=True)
         else:
-            if search_type == "track": 
+            if search_type == "track":
                 results = (
                     Track.objects.filter(title__icontains=query)[:limit]
                     .select_related("album")
                     .prefetch_related("artists")
                 )
                 serializer = TrackSerializer(results, many=True)
-            if search_type == "artist":
+            elif search_type == "artist":
                 results = Artist.objects.filter(name__icontains=query)[:limit]
                 serializer = ArtistSerializer(results, many=True)
-            if search_type == "album":
+            elif search_type == "album":
                 results = (
                     Album.objects.filter(name__icontains=query)[:limit]
                     .prefetch_related("artists")
