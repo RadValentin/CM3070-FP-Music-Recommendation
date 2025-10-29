@@ -187,9 +187,13 @@ CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         "LOCATION": "unique-snowflake",
-        "TIMEOUT": 300
+        "TIMEOUT": 600
     }
 }
+
+CACHE_MIDDLEWARE_ALIAS = "default"
+CACHE_MIDDLEWARE_SECONDS = 600
+CACHE_MIDDLEWARE_KEY_PREFIX = ""
 
 # Custom settings for running tests
 if "test" in sys.argv:
