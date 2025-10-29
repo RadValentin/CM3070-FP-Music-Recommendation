@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.postgres.search import SearchVectorField
 from django.contrib.postgres.indexes import GinIndex, GistIndex
 
 
@@ -46,12 +47,16 @@ class Track(models.Model):
     genre_dortmund = models.CharField(max_length=255)
     genre_rosamerica = models.CharField(max_length=255)
     submissions = models.IntegerField()
-    file_path = models.CharField(max_length=1024, null=True, blank=True)
+    #file_path = models.CharField(max_length=1024, null=True, blank=True)
+    artists_text = models.TextField(default="", blank=True)
+    search_vector = SearchVectorField(null=True)
 
     class Meta:
         indexes = [
             GinIndex(fields=["title"], name="track_title_trgm", opclasses=["gin_trgm_ops"]),
             GistIndex(fields=["title"], name="track_title_trgm_gist", opclasses=["gist_trgm_ops"]),
+
+            GinIndex(fields=["search_vector"], name="track_search_vector_gin"),
         ]
 
 

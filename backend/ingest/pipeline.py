@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from collections import Counter, defaultdict
 from datetime import date
+from django.contrib.postgres.search import SearchVector
 from django.db import transaction, connection
 from dotenv import dotenv_values
 from pathlib import Path
@@ -251,6 +252,8 @@ def build_database(use_sample: bool, num_parts: int = None, parts_list: list = N
             genre_dortmund=track["genre_dortmund"],
             genre_rosamerica=track["genre_rosamerica"],
             submissions=track["submissions"],
+            # TODO: Handle this after the duplicate artist names are merged.
+            artists_text=" ".join([name for _, name in artist_pairs])
             # file_path=track["file_path"],
         )
         track_list.append(track_obj)
@@ -351,9 +354,16 @@ def build_database(use_sample: bool, num_parts: int = None, parts_list: list = N
                 track_list[i : i + BATCH_SIZE], batch_size=BATCH_SIZE
             )
             show_progress_bar(i, len(track_list), BATCH_SIZE, message="Inserting Tracks:")
+        
+        print(f"\nBuilding search vectors for tracks")
+        search_vector = (
+            SearchVector("title", config="simple", weight="A") +
+            SearchVector("artists_text", config="simple", weight="B")
+        )
+        Track.objects.update(search_vector=search_vector)
 
         end = time.time()
-        print(f"\nInserted {len(track_list)} Tracks in {end - start:.2f} seconds")
+        print(f"Inserted {len(track_list)} Tracks in {end - start:.2f} seconds")
         del track_list
 
         start = time.time()
