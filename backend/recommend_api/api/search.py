@@ -61,12 +61,11 @@ class SearchView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        is_one_word = len(query.split()) == 1
         use_trigram = len(query) > 3
         if use_trigram:
             if search_type == "track":
                 search_query = SearchQuery(query, search_type="websearch", config="simple")
-                results = (
+                fts_id_qs = (
                     Track.objects.alias(
                         search_rank=SearchRank(F("search_vector"), search_query),
                         popularity=ExpressionWrapper(
@@ -78,35 +77,47 @@ class SearchView(APIView):
                             output_field=FloatField(),
                         ),
                     )
-                    .annotate(qs_order=models.Value(0, models.IntegerField()))
                     .filter(search_vector=search_query)
-                    .order_by("-combined_rank")[:limit]
-                    .select_related("album")
-                    .prefetch_related("artists")
+                    .order_by("-combined_rank")
+                    .values_list("pk", flat=True)[:limit]
                 )
+                fts_ids = list(fts_id_qs)
 
                 # FTS may not return enough results, fill in the rest using fuzzy trigram matching
-                if len(results) < limit:
-                    fts_ids = list(results.values_list("pk", flat=True))
-                    fill_limit = limit - len(results)
+                remaining = max(0, limit - len(fts_ids))
+                trgm_ids = []
+                if remaining:
+                    log.info(f"Backfilling search for ({query}) with {remaining}/{limit} entries using trigrams.")
+                    is_one_word = len(query.split()) == 1
                     if is_one_word:
                         distance_expr = TrigramWordDistance(query, "title")
                     else:
                         distance_expr = TrigramDistance("title", query)
 
-                    trgm_results = (
+                    trgm_id_qs = (
                         Track.objects.filter(title__trigram_similar=query)
                         .alias(distance=distance_expr)
-                        .annotate(qs_order=models.Value(1, models.IntegerField()))
                         .exclude(pk__in=fts_ids)
-                        .order_by("distance", "-submissions")[:fill_limit]
+                        .order_by("distance", "-submissions")
+                        .values_list("pk", flat=True)[:remaining]
+                    )
+                    # merge results while preserving order
+                    trgm_ids = list(trgm_id_qs)
+                
+                final_ids = fts_ids + trgm_ids
+                if not final_ids:
+                    serializer = TrackSerializer([], many=True)
+                else:
+                    results = (
+                        Track.objects
+                        .filter(pk__in=final_ids)
                         .select_related("album")
                         .prefetch_related("artists")
                     )
-                    # merge results while preserving order
-                    results = results.union(trgm_results).order_by("qs_order")
-
-                serializer = TrackSerializer(results, many=True)
+                    # Preserve order of results, FTS ones should come before trgm backfill.
+                    id_to_pos = {pk: pos for pos, pk in enumerate(final_ids)}
+                    results_list = sorted(results, key=lambda track: id_to_pos[track.pk])
+                    serializer = TrackSerializer(results_list, many=True)
             if search_type == "artist":
                 results = (
                     Artist.objects.filter(name__trigram_similar=query)
