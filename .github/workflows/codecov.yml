@@ -1,0 +1,15 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 80%           # require 80% overall
+        threshold: 0.5%       # ignore tiny 0.5% changes
+        informational: true   # don't fail PRs
+    patch:
+      default:
+        informational: true   # never fail on per-patch coverage
+
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: true       # only comment when coverage actually changes
