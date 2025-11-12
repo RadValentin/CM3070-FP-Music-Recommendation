@@ -50,18 +50,19 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # UpdateCacheMiddleware must be first, see: https://docs.djangoproject.com/en/5.2/topics/cache/#the-per-site-cache
     "django.middleware.cache.UpdateCacheMiddleware",
-    "django.middleware.gzip.GZipMiddleware",
+    "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
-    "django.middleware.security.SecurityMiddleware",
+    "django.middleware.gzip.GZipMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "django.middleware.cache.FetchFromCacheMiddleware",
+    "django.middleware.cache.FetchFromCacheMiddleware", # must be last
 ]
 
 ROOT_URLCONF = "music_recommendation.urls"
@@ -109,14 +110,11 @@ DATABASES = {
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
-    {
+    }, {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
+    }, {
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
+    }, {
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
