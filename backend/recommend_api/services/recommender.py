@@ -6,22 +6,46 @@ import numpy as np
 from dataclasses import dataclass
 from sklearn.metrics.pairwise import cosine_similarity
 
-# TODO: Refactor as a class so we don't pollute the global space
-filename = os.path.join(os.path.dirname(__file__), "../..", "features_and_index.npz")
-try:
-    data = np.load(filename, allow_pickle=True)
-    # Load the audio features matrix and track metadata into memory
-    feature_matrix = data["feature_matrix"]
-    feature_matrix_raw = data["feature_matrix_raw"]
-    feature_names = data["feature_names"]
-    mbid_to_idx = data["mbids"]
-    years = data["years"]  # release year
-    genre_dortmund = data["genre_dortmund"]  # genre classification
-    genre_rosamerica = data["genre_rosamerica"]  # genre classification
-except FileNotFoundError as ex:
-    print(f"Feature file not found at {filename}")
 
-    
+class FeatureStore:
+    _loaded = False
+
+    def __init__(self, path):
+        if FeatureStore._loaded:
+            return
+        try:
+            data = np.load(path, allow_pickle=True, mmap_mode="r")
+            # Load the audio features matrix and track metadata into memory
+            self.feature_matrix = data["feature_matrix"]
+            self.feature_matrix_raw = data["feature_matrix_raw"]
+            self.feature_names = data["feature_names"]
+            self.mbid_to_idx = data["mbids"]
+            self.years = data["years"]  # release year
+            self.genre_dortmund = data["genre_dortmund"]  # genre classification
+            self.genre_rosamerica = data["genre_rosamerica"]  # genre classification
+
+            # Ensure data is read-only
+            for arr in (
+                self.feature_matrix,
+                self.feature_matrix_raw,
+                self.feature_names,
+                self.mbid_to_idx,
+                self.years,
+                self.genre_dortmund,
+                self.genre_rosamerica,
+            ):
+                try:
+                    arr.setflags(write=False)
+                except ValueError:
+                    pass
+
+            FeatureStore._loaded = True
+        except FileNotFoundError as ex:
+            print(f"Feature file not found at {path}")
+
+
+STORE = FeatureStore(os.path.join(os.path.dirname(__file__), "../..", "features_and_index.npz"))
+
 def recommend(target_mbid, options=None):
     """
     Returns k tracks that have similar features to a target track identified by MBID.
@@ -52,7 +76,7 @@ def recommend(target_mbid, options=None):
         options = {}
     if not isinstance(options, dict):
         raise TypeError("options must be a dict")
-    
+
     k = options.get("k", 50)
     use_ros = options.get("use_ros", True)
     exclude_mbids = options.get("exclude_mbids", [])
@@ -61,49 +85,49 @@ def recommend(target_mbid, options=None):
     feature_weights = options.get("feature_weights", {})
 
     # Identify the index, year and genre of the targeted track
-    idxs = np.where(mbid_to_idx == target_mbid)[0]
+    idxs = np.where(STORE.mbid_to_idx == target_mbid)[0]
     if idxs.size == 0:
         raise ValueError(f"Target MBID not found: {target_mbid}")
     target_index = int(idxs[0])
 
-    target_year = int(years[target_index])
-    target_genre_dortmund = genre_dortmund[target_index]
-    target_genre_rosamerica = genre_rosamerica[target_index]
+    target_year = int(STORE.years[target_index])
+    target_genre_dortmund = STORE.genre_dortmund[target_index]
+    target_genre_rosamerica = STORE.genre_rosamerica[target_index]
 
     # Filter the data to a subset of tracks which are in a += 10 year interval, same genre and
     # aren't excluded
-    mask = np.ones_like(years, dtype=bool)
+    mask = np.ones_like(STORE.years, dtype=bool)
     if match_decade:
         target_decade = (target_year // 10) * 10
-        mask &= (years >= target_decade) & (years < target_decade + 10)
+        mask &= (STORE.years >= target_decade) & (STORE.years < target_decade + 10)
 
     if match_genre:
         if use_ros:
-            mask &= genre_rosamerica == target_genre_rosamerica
+            mask &= STORE.genre_rosamerica == target_genre_rosamerica
         else:
-            mask &= genre_dortmund == target_genre_dortmund
+            mask &= STORE.genre_dortmund == target_genre_dortmund
 
     if exclude_mbids:
         # exclude list of provided mbids and target track
-        mask &= ~np.isin(mbid_to_idx, exclude_mbids + [target_mbid])
+        mask &= ~np.isin(STORE.mbid_to_idx, exclude_mbids + [target_mbid])
     else:
         # always exclude the target
-        mask &= ~np.isin(mbid_to_idx, [target_mbid])
+        mask &= ~np.isin(STORE.mbid_to_idx, [target_mbid])
 
     # build a weight vector for the features, determines feature impact on similarity score
-    weights = np.ones(len(feature_names))
-    for i, name in enumerate(feature_names):
+    weights = np.ones(len(STORE.feature_names))
+    for i, name in enumerate(STORE.feature_names):
         if name in feature_weights:
             weights[i] = feature_weights[name]
 
     # the features we're comparing against, make sure to keep 2D shape
-    query_vec = feature_matrix[target_index : target_index + 1]
+    query_vec = STORE.feature_matrix[target_index : target_index + 1]
     # filter EVERYTHING with the same mask, DO NOT rebind globals
-    fm = feature_matrix[mask] * weights
-    mb = mbid_to_idx[mask]
-    yrs = years[mask]
-    gd = genre_dortmund[mask]
-    gr = genre_rosamerica[mask]
+    fm = STORE.feature_matrix[mask] * weights
+    mb = STORE.mbid_to_idx[mask]
+    yrs = STORE.years[mask]
+    gd = STORE.genre_dortmund[mask]
+    gr = STORE.genre_rosamerica[mask]
 
     # Find similar tracks
     start = time.perf_counter()
@@ -157,15 +181,15 @@ def get_feature_stats():
             - "total_col_count" (int): Total number of feature columns.
     """
     # How many unique vectors exist, to check if multiple tracks have the same features
-    rounded = np.round(feature_matrix, 4)
+    rounded = np.round(STORE.feature_matrix, 4)
     _, unique_idx = np.unique(rounded, axis=0, return_index=True)
 
     # Column-wise variance (near-zero variance columns kill discrimination)
-    col_std = feature_matrix.std(axis=0)
+    col_std = STORE.feature_matrix.std(axis=0)
     zero_var_cols = (col_std < 1e-6).sum()
 
     return {
-        "unique_track_count": len(mbid_to_idx),
+        "unique_track_count": len(STORE.mbid_to_idx),
         "unique_vector_count": unique_idx.size,
         "near_zero_col_count": int(zero_var_cols),
         "total_col_count": col_std.size,
