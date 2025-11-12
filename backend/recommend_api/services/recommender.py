@@ -1,17 +1,25 @@
 # Generate recommendations based on a given MusicBrainzID using Cosine Similarity
 # Note: This file loads the feature matrix into memory, make sure to import it only once
 # Note: MBID - MusicBrainz unique IDs
-import os, sys, time
+
+import os, sys, time, logging
 import numpy as np
 from dataclasses import dataclass
 from sklearn.metrics.pairwise import cosine_similarity
 
+log = logging.getLogger(__name__)
+
 
 class FeatureStore:
-    _loaded = False
+    _instance = None
+
+    def __new__(cls, path):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
     def __init__(self, path):
-        if FeatureStore._loaded:
+        if getattr(self, "_loaded", False):
             return
         try:
             data = np.load(path, allow_pickle=True, mmap_mode="r")
@@ -39,9 +47,9 @@ class FeatureStore:
                 except ValueError:
                     pass
 
-            FeatureStore._loaded = True
+            self._loaded = True
         except FileNotFoundError as ex:
-            print(f"Feature file not found at {path}")
+            log.warning(f"Feature file not found at {path}")
 
 
 STORE = FeatureStore(os.path.join(os.path.dirname(__file__), "../..", "features_and_index.npz"))
