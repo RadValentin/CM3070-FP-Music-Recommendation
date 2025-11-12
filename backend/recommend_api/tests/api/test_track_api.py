@@ -38,11 +38,11 @@ class TrackAPITests(APITestCase):
         mbid = self.track_tuples[0][0]
         with patch("recommend_api.api.track.rec") as mock_rec:
             features = np.array([0.5, 0.2])
-            features_raw = np.array([50.0, 20.0])  
-            mock_rec.mbid_to_idx = np.array([mbid for mbid, _ in self.track_tuples])
-            mock_rec.feature_names = ["danceability", "aggressiveness"]
-            mock_rec.feature_matrix = np.array([features], dtype=object)
-            mock_rec.feature_matrix_raw = np.array([features_raw], dtype=object)
+            features_raw = np.array([50.0, 20.0])
+            mock_rec.STORE.mbid_to_idx = np.array([mbid for mbid, _ in self.track_tuples])
+            mock_rec.STORE.feature_names = ["danceability", "aggressiveness"]
+            mock_rec.STORE.feature_matrix = np.array([features], dtype=object)
+            mock_rec.STORE.feature_matrix_raw = np.array([features_raw], dtype=object)
 
             url = reverse("api:track-features", kwargs={"mbid": mbid})
             resp = self.client.get(url)
@@ -78,7 +78,7 @@ class TrackAPITests(APITestCase):
                 "thumbnail": source.thumbnail,
                 "url": source.url,
             })
-    
+
     def test_get_sources_not_found(self):
         mbid = self.track_tuples[0][0]
         with patch("recommend_api.api.track.get_youtube_source") as mock_source:

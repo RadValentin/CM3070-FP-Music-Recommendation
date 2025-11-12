@@ -31,15 +31,15 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
     def features(self, request, *args, **kwargs):
         track: Track = self.get_object()
         mbid = track.musicbrainz_recordingid
-        index = np.where(rec.mbid_to_idx == mbid)[0]
-        features = rec.feature_matrix[index][0]
-        raw_features = rec.feature_matrix_raw[index][0]
+        index = np.where(rec.STORE.mbid_to_idx == mbid)[0]
+        features = rec.STORE.feature_matrix[index][0]
+        raw_features = rec.STORE.feature_matrix_raw[index][0]
 
         features_dict = {}
         raw_features_dict = {}
         for i, feature in enumerate(features):
-            features_dict[rec.feature_names[i]] = feature
-            raw_features_dict[rec.feature_names[i]] = raw_features[i]
+            features_dict[rec.STORE.feature_names[i]] = feature
+            raw_features_dict[rec.STORE.feature_names[i]] = raw_features[i]
 
         serializer = TrackFeaturesResponseSerializer({
             "track": track,
@@ -47,7 +47,7 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
             "raw_features": raw_features_dict
         })
         return Response(serializer.data)
-    
+
     @extend_schema(
         description="Get a list of sources for a track (Youtube)"
     )
@@ -63,11 +63,11 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
             if settings.DEBUG:
                 payload["debug"] = {"error": str(e)}
             return Response(payload, status=200)
-        
+
         if not source:
             payload = {"track": TrackSerializer(track).data, "sources": []}
             return Response(payload, status=200)
-        
+
         data = [{
             "provider": "youtube",
             "id": source.video_id,
@@ -78,6 +78,6 @@ class TrackViewSet(viewsets.ReadOnlyModelViewSet):
         }]
 
         return Response({
-            "track": TrackSerializer(track).data, 
+            "track": TrackSerializer(track).data,
             "sources": data
         })
