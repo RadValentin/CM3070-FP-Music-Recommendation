@@ -12,9 +12,12 @@ log = logging.getLogger(__name__)
 class FeatureStore:
     _instance = None
 
-    def __new__(cls):
+    def __new__(cls, path):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
+            cls._path = path
+        elif cls._path != path:
+            raise ValueError(f"FeatureStore already initialized with {cls._path}, cannot reinitialize with {path}")
         return cls._instance
 
     def __init__(self, path):
