@@ -2,9 +2,8 @@
 # Note: This file loads the feature matrix into memory, make sure to import it only once
 # Note: MBID - MusicBrainz unique IDs
 
-import os, sys, time, logging
+import os, time, logging
 import numpy as np
-from dataclasses import dataclass
 from sklearn.metrics.pairwise import cosine_similarity
 
 log = logging.getLogger(__name__)
@@ -13,7 +12,7 @@ log = logging.getLogger(__name__)
 class FeatureStore:
     _instance = None
 
-    def __new__(cls, path):
+    def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
