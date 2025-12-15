@@ -179,3 +179,4 @@ lmdb_data/
 features_and_index.npz
 output.txt
 db.sqbpro
+.ssh/

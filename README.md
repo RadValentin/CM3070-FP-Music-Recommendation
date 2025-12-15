@@ -114,3 +114,25 @@ $$finalSize = datasetSize - duplicateCount - tracksMissingData - tracksMissingAr
 
 For the sample dataset (100k tracks), 85732 unique entries will be loaded:
 $$85732 = 100000 - 11182 - 4 - 3082$$
+
+## Deploy and Docker
+This project uses [Docker](https://docs.docker.com/) to build and manage a reproducible environment that runs the same both locally and in production. This removes the need of having some special setup that exists solely on the server and isn't included in the repo.
+
+```sh
+docker build -t mender-backend .
+docker run -p 8000:8000 mender-backend
+docker stop mender-backend
+```
+
+```sh
+ssh root@134.209.62.122
+```
+
+> [!TIP]:
+> In Windows you may need to stop WSL from running distros in the background to do this run:
+>```sh
+># list running distros
+>wsl -l -v
+># terminate one to free up RAM
+>wsl -t {NAME}
+>```
