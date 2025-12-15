@@ -33,7 +33,7 @@ SECRET_KEY = config.get("DJANGO_SECRET_KEY", "django-insecure-jb4&(vsla6+72a&1le
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config.get("DJANGO_DEBUG", "False") == "True"
 
-if not DEBUG:
+if not DEBUG and "test" not in sys.argv:
     SECURE_SSL_REDIRECT = True  # Force HTTPS
     SESSION_COOKIE_SECURE = True  # HTTPS-only cookies
     CSRF_COOKIE_SECURE = True
