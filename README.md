@@ -149,6 +149,12 @@ nvm use v20.17.0
 sudo systemctl enable nginx
 sudo systemctl start nginx
 
+# open ports so nginx can serve front-end
+sudo ufw allow 80/tcp    # HTTP
+sudo ufw allow 443/tcp   # HTTPS (for certs later)
+sudo systemctl reload ufw
+sudo ufw status
+
 # create Nginx config
 sudo touch /etc/nginx/sites-available/tastemender
 code /etc/nginx/sites-available/tastemender
@@ -157,7 +163,7 @@ code /etc/nginx/sites-available/tastemender
 ```
 server {
     listen 80;
-    server_name 134.209.62.122;
+    server_name taste-mender.com www.taste-mender.com 134.209.62.122;
 
     location / {
         proxy_pass http://localhost:8000;
@@ -191,6 +197,39 @@ cd tastemender
 touch backend/.env
 # add production values (see .env.example)
 code backend/.env
+```
+
+### Run the project directly on droplet
+
+```sh
+# install Python 3.13 and venv
+sudo add-apt-repository ppa:deadsnakes/ppa
+sudo apt update
+sudo apt install -y python3.13 python3.13-venv python3-pip build-essential
+
+# build frontend
+cd ~/tastemender/frontend
+npm install && npm run build
+
+# create virtual environment
+cd ~/tastemender/backend
+python3.13 -m venv venv
+source venv/bin/activate
+
+# install requirements
+pip install -r requirements.txt
+pip install gunicorn
+
+python manage.py collectstatic --noinput
+
+gunicorn music_recommendation.wsgi:application \
+  --bind 0.0.0.0:8000 \
+  --workers 1 \
+  --timeout 300 \
+  --preload \
+  --access-logfile - \
+  --error-logfile - \
+  --daemon
 ```
 
 ### Deploy and Run
