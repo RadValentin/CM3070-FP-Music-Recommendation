@@ -1,10 +1,10 @@
 import axios from "axios";
 import type {
-  Track, TrackFeaturesResponse, Artist, Paginated, RecommendRequest, RecommendResponse, 
+  Track, TrackFeaturesResponse, Artist, Paginated, RecommendRequest, RecommendResponse,
   SearchResponse, Album
 } from "./types";
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE || "http://localhost:8000/api/v1/"
+export const API_BASE_URL = import.meta.env.VITE_API_BASE || "/api/v1/"
 
 const api = axios.create({
   baseURL: API_BASE_URL,
