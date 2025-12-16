@@ -36,4 +36,4 @@ EXPOSE 8000
 
 # Run Django
 # CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
-CMD ["gunicorn", "music_recommendation.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "60", "--access-logfile", "-", "--error-logfile", "-"]
+CMD ["gunicorn", "music_recommendation.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "1", "--timeout", "300", "--preload", "--access-logfile", "-", "--error-logfile", "-"]
