@@ -34,7 +34,8 @@ SECRET_KEY = config.get("DJANGO_SECRET_KEY", "django-insecure-jb4&(vsla6+72a&1le
 DEBUG = config.get("DJANGO_DEBUG", "False") == "True"
 
 if not DEBUG and "test" not in sys.argv:
-    SECURE_SSL_REDIRECT = True  # Force HTTPS
+    # Temporarily disable until set up Certbot/Let's Encrypt
+    #SECURE_SSL_REDIRECT = True  # Force HTTPS
     SESSION_COOKIE_SECURE = True  # HTTPS-only cookies
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True

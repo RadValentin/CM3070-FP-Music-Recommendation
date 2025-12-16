@@ -124,10 +124,6 @@ docker run -p 8000:8000 mender-backend
 docker stop mender-backend
 ```
 
-```sh
-ssh root@134.209.62.122
-```
-
 > [!TIP]:
 > In Windows you may need to stop WSL from running distros in the background to do this run:
 >```sh
@@ -135,4 +131,85 @@ ssh root@134.209.62.122
 >wsl -l -v
 ># terminate one to free up RAM
 >wsl -t {NAME}
->```
+>``
+
+### Setting up the droplet
+```sh
+ssh root@134.209.62.122
+cd ~
+
+# install Nginx and Node
+sudo apt update
+sudo apt install -y nginx
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+nvm install v20.17.0
+nvm use v20.17.0
+
+# enable and start
+sudo systemctl enable nginx
+sudo systemctl start nginx
+
+# create Nginx config
+sudo touch /etc/nginx/sites-available/tastemender
+code /etc/nginx/sites-available/tastemender
+```
+
+```
+server {
+    listen 80;
+    server_name 134.209.62.122;
+
+    location / {
+        proxy_pass http://localhost:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /static/ {
+        proxy_pass http://localhost:8000/static/;
+        # Cache static files
+        expires 30d;
+    }
+}
+```
+
+```sh
+# Enable the config
+sudo ln -s /etc/nginx/sites-available/tastemender /etc/nginx/sites-enabled/
+sudo nginx -t  # check config syntax
+sudo systemctl reload nginx
+
+# Setup project
+git clone https://github.com/RadValentin/CM3070-FP-Music-Recommendation.git tastemender
+cd tastemender
+
+# copy `features_and_index.npz` that was built locally during ingest to backend/
+
+# create .env file in backend/
+touch backend/.env
+# add production values (see .env.example)
+code backend/.env
+```
+
+### Deploy and Run
+```sh
+cd ~/tastemender
+git pull
+
+# build the frontend
+cd frontend && npm install && npm run build && cd ..
+
+# build and start container
+# from repo root
+docker compose -f backend/docker-compose.yml up --build -d
+
+# run migrations
+docker exec taste-mender-web python manage.py migrate
+
+# check logs
+docker logs -f taste-mender-web
+```
+
+`

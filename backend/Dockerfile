@@ -7,7 +7,8 @@ ENV PYTHONUNBUFFERED=1
 # Set work directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies (including compiler tools needed to build Python packages
+# with C extensions) and clean up apt cache to reduce image size
 RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
@@ -34,4 +35,5 @@ RUN python manage.py collectstatic --noinput
 EXPOSE 8000
 
 # Run Django
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["gunicorn", "music_recommendation.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "60", "--access-logfile", "-", "--error-logfile", "-"]
