@@ -249,6 +249,3 @@ docker exec taste-mender-web python manage.py migrate
 
 # check logs
 docker logs -f taste-mender-web
-```
-
-`
