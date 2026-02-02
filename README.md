@@ -124,18 +124,18 @@ docker run -p 8000:8000 mender-backend
 docker stop mender-backend
 ```
 
-> [!TIP]:
+> [!TIP]
 > In Windows you may need to stop WSL from running distros in the background to do this run:
 >```sh
 ># list running distros
 >wsl -l -v
 ># terminate one to free up RAM
 >wsl -t {NAME}
->``
+>```
 
 ### Setting up the droplet
 ```sh
-ssh root@134.209.62.122
+ssh root@your-server-ip
 cd ~
 
 # install Nginx and Node
