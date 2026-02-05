@@ -18,10 +18,10 @@ from dotenv import dotenv_values
 BASE_DIR = Path(__file__).resolve().parent.parent
 config = dotenv_values(BASE_DIR / ".env")
 
-# REQUIRED_ENV_VARS = ["DJANGO_SECRET_KEY", "DATABASE_URL", "YOUTUBE_API_KEY"]
-# missing_vars = [var for var in REQUIRED_ENV_VARS if not config.get(var)]
-# if missing_vars:
-#     raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+REQUIRED_ENV_VARS = ["DJANGO_SECRET_KEY", "DATABASE_URL", "YOUTUBE_API_KEY"]
+missing_vars = [var for var in REQUIRED_ENV_VARS if not config.get(var)]
+if missing_vars:
+    raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
 
 # Quick-start development settings - unsuitable for production
