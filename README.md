@@ -119,13 +119,14 @@ $$85732 = 100000 - 11182 - 4 - 3082$$
 This project uses [Docker](https://docs.docker.com/) to build and manage a reproducible environment that runs the same both locally and in production. This removes the need of having some special setup that exists solely on the server and isn't included in the repo.
 
 ```sh
-docker build -t mender-backend .
-docker run -p 8000:8000 mender-backend
-docker stop mender-backend
+# run in repo root
+docker build . -f ./backend/Dockerfile -t taste-mender-image
+docker run --name taste-mender-web -p 8000:8000 taste-mender-image
+docker stop taste-mender-web
 ```
 
 > [!TIP]
-> In Windows you may need to stop WSL from running distros in the background to do this run:
+> In Windows you may need to stop WSL from running distros in the background, to do this run:
 >```sh
 ># list running distros
 >wsl -l -v
@@ -249,3 +250,6 @@ docker exec taste-mender-web python manage.py migrate
 
 # check logs
 docker logs -f taste-mender-web
+
+docker stop taste-mender-web
+```
