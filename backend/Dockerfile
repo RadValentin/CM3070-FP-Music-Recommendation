@@ -14,10 +14,13 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
-COPY backend/requirements.txt backend/
+COPY backend/requirements.txt backend/requirements.txt
 
 # Install Python deps
 RUN pip install --no-cache-dir -r backend/requirements.txt
+
+# Copy config
+COPY backend/.env backend/.env
 
 # Copy backend code
 COPY backend/ backend/
