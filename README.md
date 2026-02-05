@@ -161,10 +161,12 @@ sudo touch /etc/nginx/sites-available/tastemender
 code /etc/nginx/sites-available/tastemender
 ```
 
+> [NOTE]
+> TODO: Enable SSL
 ```
 server {
     listen 80;
-    server_name taste-mender.com www.taste-mender.com 134.209.62.122;
+    server_name taste-mender.com www.taste-mender.com your-server-ip;
 
     location / {
         proxy_pass http://localhost:8000;

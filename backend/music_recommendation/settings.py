@@ -114,6 +114,7 @@ DATABASES = {
     "default": dj_database_url.config(
         default=config.get("DATABASE_URL"),
         conn_max_age=600,
+        # TODO: check if this is needed when running on DO / dev
         ssl_require=not DEBUG  # enable SSL for managed Postgres in production
     )
 }

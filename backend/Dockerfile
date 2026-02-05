@@ -32,11 +32,13 @@ COPY frontend/dist frontend/dist/
 WORKDIR /app/backend
 
 # Collect static files
+# TODO: Consider moving collectstatic to the container startup via an entrypoint script, or use multi-stage builds where static files are collected separately.
 RUN python manage.py collectstatic --noinput
 
 # Expose Django dev server port
 EXPOSE 8000
 
+# TODO: Increase number of workers after validating app in production and once we get real traffic
 # Run Django
 # CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 CMD ["gunicorn", "music_recommendation.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "1", "--timeout", "300", "--preload", "--access-logfile", "-", "--error-logfile", "-"]
