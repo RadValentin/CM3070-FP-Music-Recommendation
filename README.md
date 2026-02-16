@@ -1,4 +1,7 @@
 # TasteMender: A stateless music recommendation API
+
+[![DOI](https://zenodo.org/badge/992709159.svg)](https://doi.org/10.5281/zenodo.18661801)
+
 _Created as a final project for Goldsmiths, University of London BScCS by Valentin Radulescu_
 
 > [!IMPORTANT]
