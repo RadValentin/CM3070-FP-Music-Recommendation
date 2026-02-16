@@ -2,11 +2,13 @@
 _Created as a final project for Goldsmiths, University of London BScCS by Valentin Radulescu_
 
 > [!IMPORTANT]
-> This repository reflects the version of the project submitted for assessment to Goldsmiths, University of London in September 2025.
+> 🔒 This repository reflects the version of the project submitted for assessment to Goldsmiths, University of London in September 2025.
 >
-> The corresponding final report is available under [`/report/Final_Report_Valentin_Radulescu.pdf`](/report/Final_Report_Valentin_Radulescu.pdf)
+> 📄 The corresponding final report is available under [`/report/Final_Report_Valentin_Radulescu.pdf`](/report/Final_Report_Valentin_Radulescu.pdf)
 >
-> Further development continues in a separate repository: https://github.com/RadValentin/taste-mender
+> 🎥 Video demo: https://youtu.be/z7w6dM2RtzY
+>
+> 🚀 Further development continues in a separate repository: https://github.com/RadValentin/taste-mender
 
 ## Installation
 
